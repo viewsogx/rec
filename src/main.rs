@@ -1,10 +1,9 @@
-use sqlx::{
-    SqlitePool,
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-};
-use std::{env, fs, process::exit};
+use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
+use std::{env, process::exit};
 mod common;
 use common::ALL_COMMANDS;
+mod functions;
+mod utils;
 
 fn print_all_commands() {
     println!("\n----------- rec - HELP -----------\n");
@@ -25,17 +24,14 @@ async fn main() {
         print_all_commands();
         exit(0)
     }
-
-    let file = fs::read("src/main.rs").unwrap();
-    let hash = blake3::hash(&file);
-    println!("{hash:?}");
-    let db = SqlitePool::connect_with(
+    let conn = SqlitePool::connect_with(
         SqliteConnectOptions::new()
             .filename("hash_db.db")
             .create_if_missing(true),
     )
     .await
     .unwrap();
-
-    println!("{:?}", env::current_dir());
+    if args[0] == "s" || args[0] == "save" {
+        functions::save(&conn, &args[1]).await;
+    }
 }
