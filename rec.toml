@@ -1,0 +1,4 @@
+[project]
+ignore = ["target", ".gitignore", "src"]
+remote = "https://recbase.org/viewsogx/some-project"
+branch = "main"

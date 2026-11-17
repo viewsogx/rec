@@ -1,9 +1,22 @@
 use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
-use std::{env, process::exit};
+use std::{env, fs, process::exit};
 mod common;
 use common::ALL_COMMANDS;
 mod functions;
 mod utils;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct Project {
+    ignore: Vec<String>,
+    remote: String,
+    branch: String,
+}
+
+#[derive(Deserialize)]
+struct Config {
+    project: Project,
+}
 
 fn print_all_commands() {
     println!("\n----------- rec - HELP -----------\n");
@@ -24,14 +37,23 @@ async fn main() {
         print_all_commands();
         exit(0)
     }
+
     let conn = SqlitePool::connect_with(
         SqliteConnectOptions::new()
-            .filename("hash_db.db")
+            .filename("D:/kn/hash_db.sqlite")
             .create_if_missing(true),
     )
     .await
     .unwrap();
+    let toml = fs::read_to_string("rec.toml").unwrap();
+    let project: Config = toml::from_str(&toml).unwrap();
+    let project = project.project;
+
     if args[0] == "s" || args[0] == "save" {
-        functions::save(&conn, &args[1]).await;
+        if args.len() == 1 {
+            println!("Too few arguments!")
+        } else {
+            functions::save(&conn, &args[1], &project).await;
+        }
     }
 }

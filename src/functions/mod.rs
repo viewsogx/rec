@@ -1,9 +1,10 @@
 use sqlx::{Pool, Sqlite};
 use tokio::fs;
 
-use crate::utils::get_timestamp;
+use crate::{Project, utils::get_timestamp};
 
-pub async fn save(conn: &Pool<Sqlite>, file_name: &str) {
+pub async fn save(conn: &Pool<Sqlite>, comment: &str, project: &Project) {
+    // TODO: FOR EACH FILE THAT ISNT IN IGNORE DO THIS WHOLE THING
     let file = fs::read(&file_name).await.unwrap();
     let hash = blake3::hash(&file);
 
