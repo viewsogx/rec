@@ -2,20 +2,21 @@ use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
 use std::{env, fs, process::exit};
 mod common;
 use common::ALL_COMMANDS;
-mod functions;
+mod commands;
 mod utils;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct Project {
     ignore: Vec<String>,
+    name: String,
     remote: String,
     branch: String,
 }
 
 #[derive(Deserialize)]
 struct Config {
-    project: Project,
+    config: Project,
 }
 
 fn print_all_commands() {
@@ -38,22 +39,36 @@ async fn main() {
         exit(0)
     }
 
-    let conn = SqlitePool::connect_with(
+    let db = SqlitePool::connect_with(
         SqliteConnectOptions::new()
             .filename("D:/kn/hash_db.sqlite")
             .create_if_missing(true),
     )
     .await
     .unwrap();
-    let toml = fs::read_to_string("rec.toml").unwrap();
-    let project: Config = toml::from_str(&toml).unwrap();
-    let project = project.project;
+    let search_toml = fs::read_to_string("rec.toml");
+    if search_toml.is_err() {
+        eprintln!("rec.toml file couldn't be found.");
+        return;
+    };
+    let toml = search_toml.unwrap();
+    let Ok(project): Result<Config, _> = toml::from_str(&toml) else {
+        eprintln!("Parsing error: Invalid rec.toml file");
+        return;
+    };
+    let project = project.config;
+
+    sqlx::query("CREATE TABLE IF NOT EXISTS hashes (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, project TEXT NOT NULL, branch TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, comment TEXT NOT NULL);")
+        .execute(&db)
+        .await.unwrap();
 
     if args[0] == "s" || args[0] == "save" {
-        if args.len() == 1 {
-            println!("Too few arguments!")
+        if args.len() != 2 {
+            eprintln!("Wrong number of arguments! (1) required: rec save <message>");
         } else {
-            functions::save(&conn, &args[1], &project).await;
+            commands::save(&db, &args[1], &project).await;
         }
+    } else {
+        eprintln!("Unknown rec command: {}", args[0])
     }
 }
