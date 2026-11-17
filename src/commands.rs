@@ -13,19 +13,7 @@ pub async fn save(
     comment: &str,
     project: &Project,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    println!("Saving files...");
-    save_files_in_dir(".", db, comment, project).await?;
-
-    Ok(())
-}
-
-async fn save_files_in_dir(
-    root: &str,
-    db: &Pool<Sqlite>,
-    comment: &str,
-    project: &Project,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut dirs = vec![PathBuf::from(root)];
+    let mut dirs = vec![PathBuf::from(".")];
 
     while let Some(dir) = dirs.pop() {
         let mut entries = match fs::read_dir(&dir).await {
@@ -46,6 +34,7 @@ async fn save_files_in_dir(
                 }
             };
 
+            println!("{:?}", dir);
             // Directory: add it to the traversal stack.
             if file_type.is_dir() {
                 dirs.push(path);
@@ -58,7 +47,8 @@ async fn save_files_in_dir(
             }
 
             // TODO: Check ignore rules here.
-            if project.ignore.contains(&path.to_str().unwrap().to_string()) {
+            let dirname: Vec<&str> = dir.to_str().unwrap().split(".\\").collect();
+            if project.ignore.contains(dirname[1]) {
                 continue;
             }
             // Read file.

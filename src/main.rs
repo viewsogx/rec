@@ -66,7 +66,8 @@ async fn main() {
         if args.len() != 2 {
             eprintln!("Wrong number of arguments! (1) required: rec save <message>");
         } else {
-            commands::save(&db, &args[1], &project).await;
+            println!("Saving files...");
+            commands::save(&db, &args[1], &project).await.unwrap();
         }
     } else {
         eprintln!("Unknown rec command: {}", args[0])
