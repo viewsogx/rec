@@ -1,3 +1,4 @@
+use colored::Colorize;
 use sqlx::{AssertSqlSafe, SqlitePool, sqlite::SqliteConnectOptions};
 use std::{env, fs, path::Path, process::exit};
 mod common;
@@ -23,11 +24,16 @@ struct Config {
 }
 
 fn print_all_commands() {
-    println!("\n----------- rec - HELP -----------\n");
+    println!(
+        "{}",
+        "\n\n----------- rec - HELP -----------\n".on_bright_black()
+    );
     for command in ALL_COMMANDS {
         println!(
             "\t{}\t{}\t- {}",
-            command.name, command.short, command.description
+            command.name.yellow(),
+            command.short.bright_yellow(),
+            command.description
         )
     }
     println!("")
@@ -35,8 +41,8 @@ fn print_all_commands() {
 
 #[tokio::main]
 async fn main() {
-    // TODO: coloring, init,
-
+    colored::control::set_override(true);
+    colored::control::set_virtual_terminal(true).unwrap();
     let mut args: Vec<String> = env::args().collect();
     args.remove(0);
 
