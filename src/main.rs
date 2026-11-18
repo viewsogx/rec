@@ -6,7 +6,7 @@ mod commands;
 mod utils;
 use serde::Deserialize;
 
-use crate::utils::generate_id;
+use crate::utils::{generate_id, get_timestamp};
 
 #[derive(Deserialize)]
 struct Project {
@@ -43,8 +43,10 @@ async fn main() {
     }
 
     let hashes_location = if env::consts::OS == "windows" {
-        "C:/Program Files/rec/data/data.sqlite"
+        fs::create_dir_all("C:/ProgramData/rec/data/").unwrap();
+        "C:/ProgramData/rec/data/data.sqlite"
     } else {
+        fs::create_dir_all("/var/lib/rec/data/").unwrap();
         "/var/lib/rec/data/data.sqlite"
     };
 
@@ -55,19 +57,18 @@ async fn main() {
     )
     .await
     .unwrap();
-    let search_toml = fs::read_to_string("rec.toml");
-    if search_toml.is_err() {
+
+    let Ok(toml) = fs::read_to_string("rec.toml") else {
         eprintln!("rec.toml file couldn't be found.");
         return;
     };
-    let toml = search_toml.unwrap();
     let Ok(project): Result<Config, _> = toml::from_str(&toml) else {
         eprintln!("Parsing error: Invalid rec.toml file");
         return;
     };
     let project = project.config;
     let create_hash_table = format!(
-        "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY  AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
         &project.name
     );
     let create_save_table = format!(
@@ -87,7 +88,24 @@ async fn main() {
             eprintln!("Wrong number of arguments! (1) required: rec save <message>");
         } else {
             println!("Saving files...");
-            commands::save(Path::new("."), &db, &args[1], &project, &generate_id(10))
+            let save_id = generate_id(8);
+            let comment = &args[1];
+            let insert_query = format!(
+                "INSERT INTO 'saves_{}'
+        ( id, timestamp, branch, comment)
+        VALUES ( ?, ?, ?, ?)",
+                &project.name
+            );
+            sqlx::query(AssertSqlSafe(insert_query))
+                .bind(&save_id)
+                .bind(get_timestamp())
+                .bind(&project.branch)
+                .bind(&comment)
+                .execute(&db)
+                .await
+                .unwrap();
+
+            commands::save(&db, Path::new("."), comment, &project, &save_id)
                 .await
                 .unwrap();
         }

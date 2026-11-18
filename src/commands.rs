@@ -1,10 +1,7 @@
 use anyhow::Error;
 use sqlx::{AssertSqlSafe, Pool, Sqlite};
 
-use crate::{
-    Project,
-    utils::{generate_id, get_timestamp},
-};
+use crate::Project;
 
 use std::{
     fs::{self, DirEntry},
@@ -12,13 +9,12 @@ use std::{
 };
 
 pub async fn save(
-    dir: &Path,
     db: &Pool<Sqlite>,
+    dir: &Path,
     comment: &str,
     project: &Project,
     save_id: &String,
 ) -> Result<(), Error> {
-    // TODO INSERT ONCE INTO SAVES_SOME-PROJECT TABLE
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -28,7 +24,7 @@ pub async fn save(
             continue;
         }
         if path.is_dir() {
-            Box::pin(save(&path, db, comment, project, &save_id)).await?;
+            Box::pin(save(db, &path, comment, project, &save_id)).await?;
         } else {
             let hash = blake3::hash(fs::read(&path)?.as_slice());
             let insert_query = format!(
