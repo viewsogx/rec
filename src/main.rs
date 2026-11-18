@@ -35,6 +35,8 @@ fn print_all_commands() {
 
 #[tokio::main]
 async fn main() {
+    // TODO: coloring, init,
+
     let mut args: Vec<String> = env::args().collect();
     args.remove(0);
 

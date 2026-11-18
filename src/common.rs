@@ -1,6 +1,3 @@
-
-mod hash_db;
-
 pub struct Command {
     pub name: &'static str,
     pub short: &'static str,
