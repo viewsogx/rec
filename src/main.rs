@@ -14,6 +14,7 @@ struct Project {
     name: String,
     remote: String,
     branch: String,
+    id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -66,18 +67,32 @@ async fn main() {
         eprintln!("rec.toml file couldn't be found.");
         return;
     };
+
     let Ok(project): Result<Config, _> = toml::from_str(&toml) else {
         eprintln!("Parsing error: Invalid rec.toml file");
         return;
     };
-    let project = project.config;
+    let mut project = project.config;
+
+    // GENERATE PROJECT ID
+    if project.id.is_none() {
+        let proj_id = generate_id(8);
+        fs::write(
+            "rec.toml",
+            format!("{}\nid = {}", toml, format!(r#""{}""#, proj_id)),
+        )
+        .unwrap();
+        project.id = Some(proj_id);
+    }
+    let project = project;
+
     let create_hash_table = format!(
         "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
-        &project.name
+        &project.id.as_ref().unwrap()
     );
     let create_save_table = format!(
         "CREATE TABLE IF NOT EXISTS 'saves_{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
-        &project.name
+        &project.id.as_ref().unwrap()
     );
     sqlx::query(AssertSqlSafe(create_hash_table))
         .execute(&db)
@@ -98,7 +113,7 @@ async fn main() {
                 "INSERT INTO 'saves_{}'
         ( id, timestamp, branch, comment)
         VALUES ( ?, ?, ?, ?)",
-                &project.name
+                &project.id.as_ref().unwrap()
             );
             sqlx::query(AssertSqlSafe(insert_query))
                 .bind(&save_id)

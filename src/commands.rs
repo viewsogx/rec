@@ -31,7 +31,7 @@ pub async fn save(
                 "INSERT INTO 'hashes_{}'
         ( save_id, file_name, hash)
         VALUES ( ?, ?, ?)",
-                &project.name
+                &project.id.as_ref().unwrap()
             );
             sqlx::query(AssertSqlSafe(insert_query))
                 .bind(&save_id)
