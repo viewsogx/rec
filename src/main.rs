@@ -6,6 +6,8 @@ mod commands;
 mod utils;
 use serde::Deserialize;
 
+use crate::utils::generate_id;
+
 #[derive(Deserialize)]
 struct Project {
     ignore: Vec<String>,
@@ -64,21 +66,28 @@ async fn main() {
         return;
     };
     let project = project.config;
-    let create_table = format!(
-        "CREATE TABLE IF NOT EXISTS '{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, comment TEXT NOT NULL);",
+    let create_hash_table = format!(
+        "CREATE TABLE IF NOT EXISTS '{}' (id TEXT PRIMARY KEY NOT NULL, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
         &project.name
     );
-    sqlx::query(AssertSqlSafe(create_table))
+    let create_save_table = format!(
+        "CREATE TABLE IF NOT EXISTS '{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
+        &project.name
+    );
+    sqlx::query(AssertSqlSafe(create_hash_table))
         .execute(&db)
         .await
         .unwrap();
-
+    sqlx::query(AssertSqlSafe(create_save_table))
+        .execute(&db)
+        .await
+        .unwrap();
     if args[0] == "s" || args[0] == "save" {
         if args.len() != 2 {
             eprintln!("Wrong number of arguments! (1) required: rec save <message>");
         } else {
             println!("Saving files...");
-            commands::save(Path::new("."), &db, &args[1], &project)
+            commands::save(Path::new("."), &db, &args[1], &project, &generate_id(10))
                 .await
                 .unwrap();
         }
