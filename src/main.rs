@@ -1,5 +1,5 @@
-use sqlx::{SqlitePool, sqlite::SqliteConnectOptions};
-use std::{env, fs, process::exit};
+use sqlx::{AssertSqlSafe, SqlitePool, sqlite::SqliteConnectOptions};
+use std::{env, fs, path::Path, process::exit};
 mod common;
 use common::ALL_COMMANDS;
 mod commands;
@@ -29,6 +29,7 @@ fn print_all_commands() {
     }
     println!("")
 }
+
 #[tokio::main]
 async fn main() {
     let mut args: Vec<String> = env::args().collect();
@@ -39,9 +40,15 @@ async fn main() {
         exit(0)
     }
 
+    let hashes_location = if env::consts::OS == "windows" {
+        "C:/Program Files/rec/data/hashes.sqlite"
+    } else {
+        "/var/lib/rec/data/hashes.sqlite"
+    };
+
     let db = SqlitePool::connect_with(
         SqliteConnectOptions::new()
-            .filename("D:/kn/hash_db.sqlite")
+            .filename(hashes_location)
             .create_if_missing(true),
     )
     .await
@@ -57,17 +64,23 @@ async fn main() {
         return;
     };
     let project = project.config;
-
-    sqlx::query("CREATE TABLE IF NOT EXISTS hashes (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, project TEXT NOT NULL, branch TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, comment TEXT NOT NULL);")
+    let create_table = format!(
+        "CREATE TABLE IF NOT EXISTS '{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, comment TEXT NOT NULL);",
+        &project.name
+    );
+    sqlx::query(AssertSqlSafe(create_table))
         .execute(&db)
-        .await.unwrap();
+        .await
+        .unwrap();
 
     if args[0] == "s" || args[0] == "save" {
         if args.len() != 2 {
             eprintln!("Wrong number of arguments! (1) required: rec save <message>");
         } else {
             println!("Saving files...");
-            commands::save(&db, &args[1], &project).await.unwrap();
+            commands::save(Path::new("."), &db, &args[1], &project)
+                .await
+                .unwrap();
         }
     } else {
         eprintln!("Unknown rec command: {}", args[0])

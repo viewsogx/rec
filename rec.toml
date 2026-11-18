@@ -1,5 +1,5 @@
 [config]
 name = "some-project"
-ignore = ["target", ".gitignore", "src"]
+ignore = ["target", ".gitignore", ".git"]
 remote = "https://recbase.org/viewsogx"
 branch = "main"
