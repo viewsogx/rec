@@ -110,33 +110,44 @@ async fn main() {
         .execute(&db)
         .await
         .unwrap();
-    if args[0] == "s" || args[0] == "save" {
-        if args.len() != 2 {
-            eprintln!("Wrong number of arguments! (1) required: rec save <message>");
-        } else {
-            println!("Saving files...");
-            let save_id = generate_id(8);
-            let comment = &args[1];
-            let insert_query = format!(
-                "INSERT INTO 'saves_{}'
-        ( id, timestamp, branch, comment)
-        VALUES ( ?, ?, ?, ?)",
-                &project.id.as_ref().unwrap()
-            );
-            sqlx::query(AssertSqlSafe(insert_query))
-                .bind(&save_id)
-                .bind(get_timestamp())
-                .bind(&project.branch)
-                .bind(&comment)
-                .execute(&db)
-                .await
-                .unwrap();
 
-            commands::save(&db, Path::new("."), comment, &project, &save_id)
-                .await
-                .unwrap();
+    // handle commands
+    match args[0].as_str() {
+        "s" | "save" => {
+            if args.len() != 2 {
+                eprintln!(
+                    "Wrong number of arguments! {} required:\n{} save {}",
+                    "(1)".red(),
+                    "rec".yellow(),
+                    "<message>".cyan()
+                );
+            } else {
+                println!("{}", "Saving files...".bright_green());
+                let save_id = generate_id(8);
+                let comment = &args[1];
+                let insert_query = format!(
+                    "INSERT INTO 'saves_{}'
+            ( id, timestamp, branch, comment)
+            VALUES ( ?, ?, ?, ?)",
+                    &project.id.as_ref().unwrap()
+                );
+                sqlx::query(AssertSqlSafe(insert_query))
+                    .bind(&save_id)
+                    .bind(get_timestamp())
+                    .bind(&project.branch)
+                    .bind(&comment)
+                    .execute(&db)
+                    .await
+                    .unwrap();
+
+                commands::save(&db, Path::new("."), comment, &project, &save_id)
+                    .await
+                    .unwrap();
+            }
         }
-    } else {
-        eprintln!("Unknown rec command: {}", args[0])
+        "i" | "init" => {}
+        _ => {
+            eprintln!("Unknown command: {}", args[0])
+        }
     }
 }
