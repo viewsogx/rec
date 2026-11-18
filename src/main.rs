@@ -45,6 +45,9 @@ async fn main() {
     let hashes_location = if env::consts::OS == "windows" {
         fs::create_dir_all("C:/ProgramData/rec/data/").unwrap();
         "C:/ProgramData/rec/data/data.sqlite"
+    } else if env::consts::OS == "macos" {
+        fs::create_dir_all("/Library/Application Support/rec/data/").unwrap();
+        "/Library/Application Support/rec/data/data.sqlite"
     } else {
         fs::create_dir_all("/var/lib/rec/data/").unwrap();
         "/var/lib/rec/data/data.sqlite"
