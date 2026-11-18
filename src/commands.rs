@@ -18,6 +18,7 @@ pub async fn save(
     project: &Project,
     save_id: &String,
 ) -> Result<(), Error> {
+    // TODO INSERT ONCE INTO SAVES_SOME-PROJECT TABLE
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -31,18 +32,15 @@ pub async fn save(
         } else {
             let hash = blake3::hash(fs::read(&path)?.as_slice());
             let insert_query = format!(
-                "INSERT INTO '{}'
-        (id, timestamp, branch, file_name, hash, comment)
-        VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO 'hashes_{}'
+        ( save_id, file_name, hash)
+        VALUES ( ?, ?, ?)",
                 &project.name
             );
             sqlx::query(AssertSqlSafe(insert_query))
                 .bind(&save_id)
-                .bind(get_timestamp())
-                .bind(&project.branch)
                 .bind(&path.to_str())
                 .bind(hash.to_hex().to_string())
-                .bind(comment)
                 .execute(db)
                 .await?;
         }

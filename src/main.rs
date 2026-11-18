@@ -43,9 +43,9 @@ async fn main() {
     }
 
     let hashes_location = if env::consts::OS == "windows" {
-        "C:/Program Files/rec/data/hashes.sqlite"
+        "C:/Program Files/rec/data/data.sqlite"
     } else {
-        "/var/lib/rec/data/hashes.sqlite"
+        "/var/lib/rec/data/data.sqlite"
     };
 
     let db = SqlitePool::connect_with(
@@ -67,11 +67,11 @@ async fn main() {
     };
     let project = project.config;
     let create_hash_table = format!(
-        "CREATE TABLE IF NOT EXISTS '{}' (id TEXT PRIMARY KEY NOT NULL, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY  AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
         &project.name
     );
     let create_save_table = format!(
-        "CREATE TABLE IF NOT EXISTS '{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS 'saves_{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
         &project.name
     );
     sqlx::query(AssertSqlSafe(create_hash_table))
