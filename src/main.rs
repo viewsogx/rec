@@ -147,7 +147,12 @@ async fn main() {
         }
         "i" | "init" => {}
         _ => {
-            eprintln!("Unknown command: {}", args[0])
+            eprintln!("Unknown command: {}", args[0].yellow());
+            ALL_COMMANDS.iter().for_each(|cmd| {
+                if cmd.name.contains(&args[0]) {
+                    println!("Suggested existing command: {}", cmd.name.cyan())
+                }
+            });
         }
     }
 }
