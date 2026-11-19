@@ -49,8 +49,8 @@ pub async fn save(
 pub fn init() -> Result<(), Error> {
     let default_name = env::current_dir()?
         .file_name()
-        .unwrap()
-        .to_string_lossy()
+        .and_then(|name| name.to_str())
+        .unwrap_or("proj")
         .to_string();
     let project: Project = Project {
         name: default_name,
