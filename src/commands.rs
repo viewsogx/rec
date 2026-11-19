@@ -56,7 +56,7 @@ pub fn init() -> Result<(), Error> {
         name: default_name,
         branch: "main".into(),
         ignore: Vec::new(),
-        remote: "https://recbase.org/[username]".into(),
+        remote: "https://recbase.live/[username]".into(),
         id: Some(generate_id(8)),
     };
     let config = Config { config: project };
