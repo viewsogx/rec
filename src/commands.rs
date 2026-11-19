@@ -1,9 +1,10 @@
 use anyhow::Error;
 use sqlx::{AssertSqlSafe, Pool, Sqlite};
 
-use crate::Project;
-
+use crate::{Config, Project, utils::generate_id};
+use colored::*;
 use std::{
+    env,
     fs::{self, DirEntry},
     path::{Path, PathBuf},
 };
@@ -45,8 +46,24 @@ pub async fn save(
     Ok(())
 }
 
-pub fn init(default: bool) -> Result<(), Error> {
-    println!("New project. Default: {default}");
-
+pub fn init() -> Result<(), Error> {
+    let default_name = env::current_dir()?
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let project: Project = Project {
+        name: default_name,
+        branch: "main".into(),
+        ignore: Vec::new(),
+        remote: "https://recbase.org/[username]".into(),
+        id: Some(generate_id(8)),
+    };
+    let config = Config { config: project };
+    fs::write("rec.toml", toml::to_string_pretty(&config)?)?;
+    println!(
+        "{}",
+        "Successfully initialized rec project (rec.toml created)".bright_green()
+    );
     Ok(())
 }
