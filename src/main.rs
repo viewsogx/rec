@@ -1,6 +1,6 @@
 use colored::Colorize;
 use sqlx::{AssertSqlSafe, SqlitePool, sqlite::SqliteConnectOptions};
-use std::{env, fs, path::Path, process::exit};
+use std::{env, fs, io, path::Path, process::exit};
 mod common;
 use common::ALL_COMMANDS;
 mod commands;
@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::utils::{generate_id, get_timestamp};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Project {
     ignore: Vec<String>,
     name: String,
@@ -37,6 +37,31 @@ fn print_all_commands() {
         )
     }
     println!("")
+}
+
+fn call_init(args: &Vec<String>) {
+    if args.len() > 2 {
+        eprintln!(
+            "Wrong number of arguments! {} required:\n{} init {}",
+            "(0-1)".red(),
+            "rec".yellow(),
+            "<-n>".cyan()
+        );
+        return;
+    }
+    if args.len() == 2 && args[1] != "-no" {
+        eprint!(
+            "Invalid argument: {}\nTry: rec init {}",
+            args[1],
+            "-n".cyan()
+        );
+        return;
+    }
+    let default: bool = args.len() != 2;
+    if let Err(err) = commands::init(default) {
+        eprintln!("Failed to initialize project:\n{}", err.to_string());
+    };
+    return;
 }
 
 #[tokio::main]
@@ -71,8 +96,24 @@ async fn main() {
     .await
     .unwrap();
 
+    if args[0] == "i" || args[0] == "init" {
+        call_init(&args);
+        return;
+    }
+
     let Ok(toml) = fs::read_to_string("rec.toml") else {
-        eprintln!("rec.toml file couldn't be found.");
+        eprintln!("{} file couldn't be found.", "rec.toml".red());
+        println!(
+            "Initialize {} in current directory? (y/N)",
+            "rec project".yellow()
+        );
+        let mut answer = String::new();
+        io::stdin().read_line(&mut answer).unwrap();
+
+        if answer.trim().to_lowercase() == "y" {
+            call_init(&args);
+            return;
+        }
         return;
     };
 
@@ -145,7 +186,6 @@ async fn main() {
                     .unwrap();
             }
         }
-        "i" | "init" => {}
         _ => {
             eprintln!("Unknown command: {}", args[0].yellow());
             ALL_COMMANDS.iter().for_each(|cmd| {

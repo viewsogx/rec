@@ -44,3 +44,9 @@ pub async fn save(
 
     Ok(())
 }
+
+pub fn init(default: bool) -> Result<(), Error> {
+    println!("New project. Default: {default}");
+
+    Ok(())
+}
