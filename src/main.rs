@@ -123,7 +123,7 @@ async fn main() {
     let project = project;
 
     let create_hash_table = format!(
-        "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, size TEXT NOT NULL, cdata BLOB NOT NULL);",
         &project.id.as_ref().unwrap()
     );
     let create_save_table = format!(

@@ -1,11 +1,15 @@
 use anyhow::Error;
+use blake3::hash;
 use sqlx::{AssertSqlSafe, Pool, Sqlite};
+
+use zstd::{bulk::decompress, compress_file, zstd_safe::WriteBuf};
 
 use crate::{Config, Project, utils::generate_id};
 use colored::*;
 use std::{
     env,
     fs::{self, DirEntry},
+    os::windows::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
@@ -27,17 +31,22 @@ pub async fn save(
         if path.is_dir() {
             Box::pin(save(db, &path, comment, project, &save_id)).await?;
         } else {
-            let hash = blake3::hash(fs::read(&path)?.as_slice());
+            let compressed_data = compress_file(&path, 3)?;
+            let file_hash = blake3::hash(fs::read(&path)?.as_slice());
+            let file_size = fs::metadata(&path)?.file_size();
+
             let insert_query = format!(
                 "INSERT INTO 'hashes_{}'
-        ( save_id, file_name, hash)
-        VALUES ( ?, ?, ?)",
+        ( save_id, file_name, hash, size, cdata)
+        VALUES ( ?, ?, ?, ?, ?)",
                 &project.id.as_ref().unwrap()
             );
             sqlx::query(AssertSqlSafe(insert_query))
                 .bind(&save_id)
                 .bind(&path.to_str())
-                .bind(hash.to_hex().to_string())
+                .bind(file_hash.to_hex().to_string())
+                .bind(file_size.to_string())
+                .bind(compressed_data)
                 .execute(db)
                 .await?;
         }
