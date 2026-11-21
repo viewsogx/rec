@@ -52,17 +52,15 @@ async fn main() {
 
     let command = args[0].trim();
 
-    let hashes_location = if env::consts::OS == "windows" {
-        fs::create_dir_all("C:/ProgramData/.rec/data/").unwrap();
-        hf::hide("C:/ProgramData/.rec/").unwrap();
-        "C:/ProgramData/.rec/data/data.sqlite"
-    } else if env::consts::OS == "macos" {
-        fs::create_dir_all("/Library/Application Support/.rec/data/").unwrap();
-        "/Library/Application Support/.rec/data/data.sqlite"
-    } else {
-        fs::create_dir_all("/var/lib/.rec/data/").unwrap();
-        "/var/lib/.rec/data/data.sqlite"
-    };
+    let data_dir = dirs::data_dir() // Linux: ~/.local/share
+        .expect("no data dir") // macOS: ~/Library/Application Support
+        .join(".rec") // Windows: C:\Users\you\AppData\Roaming
+        .join("data");
+    fs::create_dir_all(&data_dir).unwrap();
+    let hashes_location = data_dir.join("data.sqlite");
+
+    #[cfg(windows)]
+    hf::hide(&data_dir).unwrap();
 
     let db = SqlitePool::connect_with(
         SqliteConnectOptions::new()
@@ -114,11 +112,7 @@ async fn main() {
     // GENERATE PROJECT ID
     if project.id.is_none() {
         let proj_id = generate_id(8);
-        fs::write(
-            "rec.toml",
-            format!("{}\nid = {}", toml, format!(r#""{}""#, proj_id)),
-        )
-        .unwrap();
+        fs::write("rec.toml", format!("{toml}\nid = \"{proj_id}\"")).unwrap();
         project.id = Some(proj_id);
     }
     let project = project;

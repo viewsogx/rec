@@ -78,7 +78,16 @@ pub fn init() -> Result<(), Error> {
 
 pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
     println!("helo {}", save_id);
-    let file: Vec<SavedFile> = sqlx::query_as("select file_name, hash, size, cdata from 'hashes_?' inner join 'saves_?' on save_id = save_id").bind(&project.id).bind(&project.id).fetch_all(db).await?;
-    println!("{:?}", file[0].name);
+    let query = format!(
+        "SELECT file_name, hash, size, cdata FROM 'hashes_{}' inner join 'saves_{}' on save_id = save_id",
+        &project.id.as_ref().unwrap(),
+        &project.id.as_ref().unwrap()
+    );
+    let Ok(files): Result<Vec<SavedFile>,_>= sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await else
+    {
+        panic!("No matching save found");
+    };
+
+    println!("{:?}", files[0].name);
     Ok(())
 }
