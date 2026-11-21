@@ -165,9 +165,11 @@ async fn main() {
                     .await
                     .unwrap();
 
-                commands::save(&db, Path::new("."), comment, &project, &save_id)
-                    .await
-                    .unwrap();
+                if let Err(error) =
+                    commands::save(&db, Path::new("."), comment, &project, &save_id).await
+                {
+                    println!("{error}")
+                }
             }
         }
         "i" | "init" => {
@@ -186,7 +188,22 @@ async fn main() {
                     "<save_id>".cyan()
                 );
             } else {
-                commands::load(&db, &args[1], &project).await.unwrap()
+                if let Err(error) = commands::load(&db, &args[1], &project).await {
+                    println!("{error}")
+                }
+            }
+        }
+        "l" | "log" => {
+            if args.len() > 1 {
+                eprintln!(
+                    "Wrong number of arguments! {} required:\n{} log",
+                    "(0)".red(),
+                    "rec".yellow()
+                );
+            } else {
+                if let Err(error) = commands::log(&db, &project).await {
+                    println!("{error}")
+                }
             }
         }
         _ => {

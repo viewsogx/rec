@@ -2,14 +2,14 @@ use anyhow::Error;
 use blake3::hash;
 use sqlx::{AssertSqlSafe, Pool, Sqlite};
 
-use zstd::{bulk::decompress, compress_file, zstd_safe::WriteBuf};
+use zstd::{bulk::decompress, compress_file};
 
 use crate::{Config, Project, common::SavedFile, utils::generate_id};
 use colored::*;
 use std::{
     env,
-    fs::{self, DirEntry},
-    path::{Path, PathBuf},
+    fs::{self},
+    path::Path,
 };
 
 pub async fn save(
@@ -84,16 +84,22 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     let Ok(files): Result<Vec<SavedFile>, _> =
         sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
     else {
-        panic!("Unexpected error occured while loading save: {save_id}");
+        return Err(Error::msg(format!(
+            "Unexpected error occurred while loading save: {save_id}"
+        )));
     };
 
     if files.len() == 0 {
-        panic!("No matching save found");
+        return Err(Error::msg("No matching save found"));
     }
 
     for file in files {
         let size: usize = file.size.parse()?;
         fs::write(file.name, decompress(&file.cdata, size)?)?
     }
+    Ok(())
+}
+
+pub async fn log(db: &Pool<Sqlite>, project: &Project) -> Result<(), Error> {
     Ok(())
 }
