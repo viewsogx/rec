@@ -4,7 +4,11 @@ use sqlx::{AssertSqlSafe, Pool, Sqlite};
 
 use zstd::{bulk::decompress, compress_file};
 
-use crate::{Config, Project, common::SavedFile, utils::generate_id};
+use crate::{
+    Config, Project,
+    common::{Save, SavedFile},
+    utils::generate_id,
+};
 use colored::*;
 use std::{
     env,
@@ -100,6 +104,33 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     Ok(())
 }
 
-pub async fn log(db: &Pool<Sqlite>, project: &Project) -> Result<(), Error> {
+pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<(), Error> {
+    let project_id = &project.id.as_ref().unwrap();
+    let query = format!(
+        "SELECT * FROM 'saves_{}' ORDER BY timestamp DESC LIMIT {limit}",
+        project_id,
+    );
+    let Ok(saves): Result<Vec<Save>, _> = sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
+    else {
+        return Err(Error::msg(format!(
+            "Unexpected error occurred while fetching saves for project: {}",
+            project.name
+        )));
+    };
+    if saves.len() == 0 {
+        println!("No saves found for project: {}", project.name)
+    } else {
+        println!(
+            "\nSAVE LOGS - {} - showing last {limit} saves\n",
+            project.name.yellow()
+        );
+        println!("{}", "id\t\ttimestamp\tbranch\tcomment".red());
+        for save in saves {
+            println!(
+                "{}\t{}\t{}\t{}",
+                save.id, save.timestamp, save.branch, save.comment
+            )
+        }
+    }
     Ok(())
 }

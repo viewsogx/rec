@@ -15,6 +15,14 @@ pub struct SavedFile {
     pub cdata: Vec<u8>,
 }
 
+#[derive(FromRow, Debug)]
+pub struct Save {
+    pub id: String,
+    pub timestamp: String,
+    pub branch: String,
+    pub comment: String,
+}
+
 pub const ALL_COMMANDS: &[Command] = &[
     Command {
         name: "init",

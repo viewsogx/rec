@@ -124,7 +124,7 @@ async fn main() {
         &project.id.as_ref().unwrap()
     );
     let create_save_table = format!(
-        "CREATE TABLE IF NOT EXISTS 'saves_{}' (id TEXT PRIMARY KEY NOT NULL, timestamp DATETIME NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS 'saves_{}' (id TEXT PRIMARY KEY NOT NULL, timestamp TEXT NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
         &project.id.as_ref().unwrap()
     );
     sqlx::query(AssertSqlSafe(create_hash_table))
@@ -158,7 +158,7 @@ async fn main() {
                 );
                 sqlx::query(AssertSqlSafe(insert_query))
                     .bind(&save_id)
-                    .bind(get_timestamp())
+                    .bind(get_timestamp().to_string())
                     .bind(&project.branch)
                     .bind(&comment)
                     .execute(&db)
@@ -194,15 +194,22 @@ async fn main() {
             }
         }
         "l" | "log" => {
-            if args.len() > 1 {
+            if args.len() != 2 {
                 eprintln!(
-                    "Wrong number of arguments! {} required:\n{} log",
-                    "(0)".red(),
-                    "rec".yellow()
+                    "Wrong number of arguments! {} required:\n{} log {}",
+                    "(1)".red(),
+                    "rec".yellow(),
+                    "<limit>".cyan()
                 );
             } else {
-                if let Err(error) = commands::log(&db, &project).await {
-                    println!("{error}")
+                if let Ok(limit) = args[1].parse() {
+                    if limit <= 0 {
+                        println!("Limit must be a positive number.")
+                    } else if let Err(error) = commands::log(&db, &project, limit).await {
+                        println!("{error}")
+                    }
+                } else {
+                    println!("Limit must be a number.")
                 }
             }
         }
