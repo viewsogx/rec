@@ -90,6 +90,10 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     if files.len() == 0 {
         panic!("No matching save found");
     }
-    println!("{:?}", files);
+
+    for file in files {
+        let size: usize = file.size.parse()?;
+        fs::write(file.name, decompress(&file.cdata, size)?)?
+    }
     Ok(())
 }
