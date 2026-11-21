@@ -191,7 +191,7 @@ async fn main() {
                     "<save_id>".cyan()
                 );
             } else {
-                commands::load(&args[1]).await.unwrap()
+                commands::load(&db, &args[1], &project).await.unwrap()
             }
         }
         _ => {

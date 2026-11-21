@@ -77,7 +77,8 @@ pub fn init() -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn load(save_id: &String) -> Result<(), Error> {
+pub async fn load(db:  &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
     println!("helo {}", save_id);
+    sqlx::query("select filename, size, hash, cdata from 'hashes_?' inner join 'saves_?' on save_id = save_id").bind(project.id).bind(project.id).fetch_all(&db).await?;
     Ok(())
 }
