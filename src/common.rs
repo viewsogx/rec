@@ -1,7 +1,18 @@
+use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
+
 pub struct Command {
     pub name: &'static str,
     pub short: &'static str,
     pub description: &'static str,
+}
+
+#[derive(Deserialize, Serialize, FromRow, Debug)]
+pub struct SavedFile {
+    pub name: String,
+    pub hash: String,
+    pub size: u64,
+    pub cdata: Vec<u8>,
 }
 
 pub const ALL_COMMANDS: &[Command] = &[

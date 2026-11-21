@@ -4,12 +4,11 @@ use sqlx::{AssertSqlSafe, Pool, Sqlite};
 
 use zstd::{bulk::decompress, compress_file, zstd_safe::WriteBuf};
 
-use crate::{Config, Project, utils::generate_id};
+use crate::{Config, Project, common::SavedFile, utils::generate_id};
 use colored::*;
 use std::{
     env,
     fs::{self, DirEntry},
-    os::windows::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
@@ -33,7 +32,7 @@ pub async fn save(
         } else {
             let compressed_data = compress_file(&path, 3)?;
             let file_hash = blake3::hash(fs::read(&path)?.as_slice());
-            let file_size = fs::metadata(&path)?.file_size();
+            let file_size = fs::metadata(&path)?.len();
 
             let insert_query = format!(
                 "INSERT INTO 'hashes_{}'
@@ -77,8 +76,9 @@ pub fn init() -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn load(db:  &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
+pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
     println!("helo {}", save_id);
-    sqlx::query("select filename, size, hash, cdata from 'hashes_?' inner join 'saves_?' on save_id = save_id").bind(project.id).bind(project.id).fetch_all(&db).await?;
+    let file: Vec<SavedFile> = sqlx::query_as("select file_name, hash, size, cdata from 'hashes_?' inner join 'saves_?' on save_id = save_id").bind(&project.id).bind(&project.id).fetch_all(db).await?;
+    println!("{:?}", file[0].name);
     Ok(())
 }

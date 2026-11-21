@@ -42,7 +42,6 @@ fn print_all_commands() {
 #[tokio::main]
 async fn main() {
     colored::control::set_override(true);
-    colored::control::set_virtual_terminal(true).unwrap();
     let mut args: Vec<String> = env::args().collect();
     args.remove(0);
 
@@ -58,10 +57,10 @@ async fn main() {
         hf::hide("C:/ProgramData/.rec/").unwrap();
         "C:/ProgramData/.rec/data/data.sqlite"
     } else if env::consts::OS == "macos" {
-        fs::create_dir_all("/Library/Application Support/rec/data/").unwrap();
+        fs::create_dir_all("/Library/Application Support/.rec/data/").unwrap();
         "/Library/Application Support/.rec/data/data.sqlite"
     } else {
-        fs::create_dir_all("/var/lib/rec/data/").unwrap();
+        fs::create_dir_all("/var/lib/.rec/data/").unwrap();
         "/var/lib/.rec/data/data.sqlite"
     };
 
