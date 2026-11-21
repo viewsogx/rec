@@ -42,6 +42,10 @@ fn print_all_commands() {
 #[tokio::main]
 async fn main() {
     colored::control::set_override(true);
+
+    #[cfg(windows)]
+    colored::control::set_virtual_terminal(true).unwrap();
+
     let mut args: Vec<String> = env::args().collect();
     args.remove(0);
 
@@ -52,12 +56,10 @@ async fn main() {
 
     let command = args[0].trim();
 
-    let data_dir = dirs::data_dir() // Linux: ~/.local/share
-        .expect("no data dir") // macOS: ~/Library/Application Support
-        .join(".rec") // Windows: C:\Users\you\AppData\Roaming
-        .join("data");
-    fs::create_dir_all(&data_dir).unwrap();
-    let hashes_location = data_dir.join("data.sqlite");
+    let data_dir = dirs::data_dir().expect("no data dir").join(".rec");
+
+    fs::create_dir_all(data_dir.join("data")).unwrap();
+    let hashes_location = data_dir.join("data").join("data.sqlite");
 
     #[cfg(windows)]
     hf::hide(&data_dir).unwrap();

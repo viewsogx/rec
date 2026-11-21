@@ -11,7 +11,7 @@ pub struct Command {
 pub struct SavedFile {
     pub name: String,
     pub hash: String,
-    pub size: u64,
+    pub size: String,
     pub cdata: Vec<u8>,
 }
 
