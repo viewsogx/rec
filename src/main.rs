@@ -182,7 +182,18 @@ async fn main() {
                 "already initialized".bright_blue()
             )
         }
-        "l" | "load" => commands::load().unwrap(),
+        "ld" | "load" => {
+            if args.len() != 2 {
+                eprintln!(
+                    "Wrong number of arguments! {} required:\n{} load {}",
+                    "(1)".red(),
+                    "rec".yellow(),
+                    "<save_id>".cyan()
+                );
+            } else {
+                commands::load(&args[1]).await.unwrap()
+            }
+        }
         _ => {
             eprintln!("Unknown command: {}", command.yellow());
             let mut suggested = String::from("");

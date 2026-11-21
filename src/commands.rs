@@ -77,7 +77,7 @@ pub fn init() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn load() -> Result<(), Error>{
-    println!("helo");
+pub async fn load(save_id: &String) -> Result<(), Error> {
+    println!("helo {}", save_id);
     Ok(())
 }
