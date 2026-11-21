@@ -76,3 +76,8 @@ pub fn init() -> Result<(), Error> {
     );
     Ok(())
 }
+
+pub fn load() -> Result<(), Error>{
+    println!("helo");
+    Ok(())
+}

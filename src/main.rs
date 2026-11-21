@@ -51,6 +51,8 @@ async fn main() {
         exit(0)
     }
 
+    let command = args[0].trim();
+
     let hashes_location = if env::consts::OS == "windows" {
         fs::create_dir_all("C:/ProgramData/.rec/data/").unwrap();
         hf::hide("C:/ProgramData/.rec/").unwrap();
@@ -71,7 +73,7 @@ async fn main() {
     .await
     .unwrap();
 
-    if (args[0] == "i" || args[0] == "init") && args.len() > 1 {
+    if (command == "i" || command == "init") && args.len() > 1 {
         eprintln!(
             "Wrong number of arguments! {} required:\n{} init",
             "(0)".red(),
@@ -81,7 +83,7 @@ async fn main() {
     }
 
     let Ok(toml) = fs::read_to_string("rec.toml") else {
-        if args[0] == "i" || args[0] == "init" {
+        if command == "i" || command == "init" {
             if let Err(err) = commands::init() {
                 eprintln!("Failed to initialize project:\n{}", err.to_string());
             };
@@ -140,7 +142,7 @@ async fn main() {
         .unwrap();
 
     // handle commands
-    match args[0].as_str() {
+    match command {
         "s" | "save" => {
             if args.len() != 2 {
                 eprintln!(
@@ -180,13 +182,19 @@ async fn main() {
                 "already initialized".bright_blue()
             )
         }
+        "l" | "load" => commands::load().unwrap(),
         _ => {
-            eprintln!("Unknown command: {}", args[0].yellow());
-            ALL_COMMANDS.iter().for_each(|cmd| {
-                if cmd.name.contains(&args[0]) {
-                    println!("Suggested existing command: {}", cmd.name.cyan())
+            eprintln!("Unknown command: {}", command.yellow());
+            let mut suggested = String::from("");
+            for cmd in ALL_COMMANDS {
+                if cmd.name.contains(&command) {
+                    suggested.push_str("\n");
+                    suggested.push_str(&cmd.name);
                 }
-            });
+            }
+            if !suggested.is_empty() {
+                println!("Suggested existing commands: {}", suggested.cyan())
+            }
         }
     }
 }
