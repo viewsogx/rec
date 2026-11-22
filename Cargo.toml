@@ -3,7 +3,7 @@ name = "rec"
 version = "0.0.1"
 edition = "2024"
 repository = "https://github.com/viewsogx/rec"
-authors = ["Kizmus Noel", "Szabó Péter", "Brückner Artúr Benedek"]
+authors = ["viewsogx"]
 description = "Version control CLI"
 license = "MIT"
 
