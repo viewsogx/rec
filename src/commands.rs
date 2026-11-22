@@ -1,5 +1,4 @@
 use anyhow::Error;
-use blake3::hash;
 use sqlx::{AssertSqlSafe, Pool, Sqlite};
 
 use zstd::{bulk::decompress, compress_file};
@@ -27,6 +26,7 @@ pub async fn save(
         let entry = entry?;
         let path = entry.path();
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let absolute_path = path.canonicalize()?;
 
         if project.ignore.contains(&file_name) {
             continue;
@@ -46,7 +46,7 @@ pub async fn save(
             );
             sqlx::query(AssertSqlSafe(insert_query))
                 .bind(&save_id)
-                .bind(&path.to_str())
+                .bind(&absolute_path.to_string_lossy().to_string())
                 .bind(file_hash.to_hex().to_string())
                 .bind(file_size.to_string())
                 .bind(compressed_data)
@@ -99,7 +99,8 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
 
     for file in files {
         let size: usize = file.size.parse()?;
-        fs::write(file.name, decompress(&file.cdata, size)?)?
+        fs::write(&file.name, decompress(&file.cdata, size)?)
+            .map_err(|e| anyhow::anyhow!("Failed to restore '{}': {}", file.name, e))?;
     }
     Ok(())
 }
