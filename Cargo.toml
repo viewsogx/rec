@@ -2,6 +2,7 @@
 name = "rec"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/viewsogx/rec"
 
 [dependencies]
 sqlx = { version = "0.9", features = ["runtime-tokio", "sqlite"] }
@@ -17,3 +18,8 @@ hf = "0.6"
 colored = "3.1.1"
 zstd = "0.14.4"
 dirs = "7.0.0"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
