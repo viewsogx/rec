@@ -3,6 +3,7 @@ name = "rec"
 version = "0.0.1"
 edition = "2024"
 repository = "https://github.com/viewsogx/rec"
+authors = ["Kizmus Noel", "Szabó Péter", "Brückner Artúr Benedek"]
 
 [package.metadata.wix]
 upgrade-guid = "12175748-7759-4787-A163-DFF0C84A7E18"
