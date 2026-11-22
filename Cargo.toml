@@ -13,6 +13,11 @@ path-guid = "6A9301DB-6B36-4607-899F-40B6CF9811F9"
 license = false
 eula = false
 
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
 [dependencies]
 sqlx = { version = "0.9", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1.54.1", features = ["full"] }
@@ -27,8 +32,3 @@ hf = "0.6"
 colored = "3.1.1"
 zstd = "0.14.4"
 dirs = "7.0.0"
-
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"
