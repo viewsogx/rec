@@ -4,6 +4,12 @@ version = "0.1.0"
 edition = "2024"
 repository = "https://github.com/viewsogx/rec"
 
+[package.metadata.wix]
+upgrade-guid = "12175748-7759-4787-A163-DFF0C84A7E18"
+path-guid = "6A9301DB-6B36-4607-899F-40B6CF9811F9"
+license = false
+eula = false
+
 [dependencies]
 sqlx = { version = "0.9", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1.54.1", features = ["full"] }
