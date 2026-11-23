@@ -127,10 +127,20 @@ pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<(),
         );
         println!("{}", "id\t\ttimestamp\tbranch\tcomment".red());
         for save in saves {
-            println!(
-                "{}\t{}\t{}\t{}",
-                save.id, save.timestamp, save.branch, save.comment
-            )
+            if save.comment.len() > 20 {
+                println!(
+                    "{}\t{}\t{}\t{}...",
+                    save.id,
+                    save.timestamp,
+                    save.branch,
+                    &save.comment[..20]
+                )
+            } else {
+                println!(
+                    "{}\t{}\t{}\t{}",
+                    save.id, save.timestamp, save.branch, save.comment
+                )
+            }
         }
     }
     Ok(())
