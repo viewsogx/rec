@@ -6,7 +6,7 @@ use zstd::{bulk::decompress, compress_file};
 use crate::{
     Config, Project,
     common::{Save, SavedFile},
-    utils::generate_id,
+    utils::{generate_id, get_timestamp},
 };
 use colored::*;
 use std::{
@@ -16,6 +16,30 @@ use std::{
 };
 
 pub async fn save(
+    db: &Pool<Sqlite>,
+    dir: &Path,
+    comment: &str,
+    project: &Project,
+    save_id: &String,
+) -> Result<(), Error> {
+    save_files(db, dir, comment, project, save_id).await?;
+    let insert_query = format!(
+        "INSERT INTO 'saves_{}'
+( id, timestamp, branch, comment)
+VALUES ( ?, ?, ?, ?)",
+        &project.id.as_ref().unwrap()
+    );
+    sqlx::query(AssertSqlSafe(insert_query))
+        .bind(&save_id)
+        .bind(get_timestamp().to_string())
+        .bind(&project.branch)
+        .bind(&comment)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
+pub async fn save_files(
     db: &Pool<Sqlite>,
     dir: &Path,
     comment: &str,
@@ -32,7 +56,7 @@ pub async fn save(
             continue;
         }
         if path.is_dir() {
-            Box::pin(save(db, &path, comment, project, &save_id)).await?;
+            Box::pin(save_files(db, &path, comment, project, &save_id)).await?;
         } else {
             let compressed_data = compress_file(&path, 3)?;
             let file_hash = blake3::hash(fs::read(&path)?.as_slice());
@@ -62,7 +86,7 @@ pub fn init() -> Result<(), Error> {
     let default_name = env::current_dir()?
         .file_name()
         .and_then(|name| name.to_str())
-        .unwrap_or("proj")
+        .unwrap_or("untitled-project")
         .to_string();
     let project: Project = Project {
         name: default_name,
@@ -73,10 +97,6 @@ pub fn init() -> Result<(), Error> {
     };
     let config = Config { config: project };
     fs::write("rec.toml", toml::to_string_pretty(&config)?)?;
-    println!(
-        "{}",
-        "Successfully initialized rec project (rec.toml created)".bright_green()
-    );
     Ok(())
 }
 
@@ -96,7 +116,14 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     if files.len() == 0 {
         return Err(Error::msg("No matching save found"));
     }
-
+    save(
+        db,
+        Path::new("."),
+        &format!("<< Loaded save: {save_id}"),
+        project,
+        &generate_id(8),
+    )
+    .await?;
     for file in files {
         let size: usize = file.size.parse()?;
         if file.name.contains("rec.toml") {
@@ -108,7 +135,7 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     Ok(())
 }
 
-pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<(), Error> {
+pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
     let project_id = &project.id.as_ref().unwrap();
     let query = format!(
         "SELECT * FROM 'saves_{}' ORDER BY timestamp DESC LIMIT {limit}",
@@ -121,30 +148,5 @@ pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<(),
             project.name
         )));
     };
-    if saves.len() == 0 {
-        println!("No saves found for project: {}", project.name)
-    } else {
-        println!(
-            "\nSAVE LOGS - {} - showing last {limit} saves\n",
-            project.name.yellow()
-        );
-        println!("{}", "id\t\ttimestamp\tbranch\tcomment".red());
-        for save in saves {
-            if save.comment.len() > 20 {
-                println!(
-                    "{}\t{}\t{}\t{}...",
-                    save.id,
-                    save.timestamp,
-                    save.branch,
-                    &save.comment[..20]
-                )
-            } else {
-                println!(
-                    "{}\t{}\t{}\t{}",
-                    save.id, save.timestamp, save.branch, save.comment
-                )
-            }
-        }
-    }
-    Ok(())
+    Ok(saves)
 }

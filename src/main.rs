@@ -99,7 +99,12 @@ async fn main() {
         if answer.trim().to_lowercase() == "y" {
             if let Err(err) = commands::init() {
                 eprintln!("Failed to initialize project:\n{}", err.to_string());
+                return;
             };
+            println!(
+                "{}",
+                "Successfully initialized rec project (rec.toml created)".bright_green()
+            );
             return;
         }
         return;
@@ -148,27 +153,10 @@ async fn main() {
                 );
             } else {
                 println!("{}", "Saving files...".bright_green());
-                let save_id = generate_id(8);
-                let comment = &args[1];
-                let insert_query = format!(
-                    "INSERT INTO 'saves_{}'
-            ( id, timestamp, branch, comment)
-            VALUES ( ?, ?, ?, ?)",
-                    &project.id.as_ref().unwrap()
-                );
-                sqlx::query(AssertSqlSafe(insert_query))
-                    .bind(&save_id)
-                    .bind(get_timestamp().to_string())
-                    .bind(&project.branch)
-                    .bind(&comment)
-                    .execute(&db)
-                    .await
-                    .unwrap();
-
                 if let Err(error) =
-                    commands::save(&db, Path::new("."), comment, &project, &save_id).await
+                    commands::save(&db, Path::new("."), &args[1], &project, &generate_id(8)).await
                 {
-                    println!("{error}")
+                    eprintln!("{error}")
                 }
             }
         }
@@ -188,9 +176,12 @@ async fn main() {
                     "<save_id>".cyan()
                 );
             } else {
-                if let Err(error) = commands::load(&db, &args[1], &project).await {
-                    println!("{error}")
+                let save_id = &args[1];
+                if let Err(error) = commands::load(&db, save_id, &project).await {
+                    eprintln!("{error}");
+                    return;
                 }
+                println!("Successfully restored save {}.", save_id.bright_green());
             }
         }
         "l" | "log" => {
@@ -204,12 +195,43 @@ async fn main() {
             } else {
                 if let Ok(limit) = args[1].parse() {
                     if limit <= 0 {
-                        println!("Limit must be a positive number.")
-                    } else if let Err(error) = commands::log(&db, &project, limit).await {
-                        println!("{error}")
+                        eprintln!("Limit must be a positive number.")
+                    } else {
+                        match commands::log(&db, &project, limit).await {
+                            Err(err) => {
+                                eprintln!("{err}")
+                            }
+                            Ok(saves) => {
+                                if saves.len() == 0 {
+                                    println!("No saves found for project: {}", project.name)
+                                } else {
+                                    println!(
+                                        "\nSAVE LOGS - {} - showing last {limit} saves\n",
+                                        project.name.yellow()
+                                    );
+                                    println!("{}", "id\t\ttimestamp\tbranch\tcomment".red());
+                                    for save in saves {
+                                        if save.comment.len() > 20 {
+                                            println!(
+                                                "{}\t{}\t{}\t{}...",
+                                                save.id,
+                                                save.timestamp,
+                                                save.branch,
+                                                &save.comment[..20]
+                                            )
+                                        } else {
+                                            println!(
+                                                "{}\t{}\t{}\t{}",
+                                                save.id, save.timestamp, save.branch, save.comment
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 } else {
-                    println!("Limit must be a number.")
+                    eprintln!("Limit must be a number.")
                 }
             }
         }
