@@ -58,7 +58,13 @@ pub async fn save_files(
             if file_size > 2_100_000_000 {
                 continue;
             }
-            let compression_level = if file_size > 500_000_000 { 10 } else { 3 };
+            let compression_level = if file_size > 500_000_000 {
+                12
+            } else if file_size > 4_000_000 {
+                7
+            } else {
+                3
+            };
             let file_content = fs::read(&path)?;
             let file_hash = blake3::hash(&file_content).to_hex().to_string();
 
