@@ -110,7 +110,7 @@ async fn main() {
     }
     let project = project;
 
-    let project_id = &project.id.as_ref().unwrap();
+    let project_id = project.id.as_ref().unwrap();
     let create_hash_table = format!(
         r#"CREATE TABLE IF NOT EXISTS "hashes_{project_id}" (id TEXT PRIMARY KEY, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, size TEXT NOT NULL, location TEXT, cdata BLOB);
         CREATE INDEX "idx_hashes_{project_id}"

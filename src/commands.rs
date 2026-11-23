@@ -23,7 +23,7 @@ pub async fn save(
         r#"INSERT INTO "saves_{}"
 ( id, timestamp, branch, comment)
 VALUES ( ?, ?, ?, ?);"#,
-        &project.id.as_ref().unwrap()
+        project.id.as_ref().unwrap()
     );
     sqlx::query(AssertSqlSafe(insert_query))
         .bind(save_id)
@@ -94,7 +94,7 @@ pub async fn save_files(
                 r#"INSERT INTO "hashes_{}"
         (id, save_id, file_name, hash, size, location, cdata)
         VALUES ( ?, ?, ?, ?, ?, ?, ?);"#,
-                &project.id.as_ref().unwrap()
+                project.id.as_ref().unwrap()
             );
             sqlx::query(AssertSqlSafe(insert_query))
                 .bind(generate_id(8))
@@ -133,7 +133,7 @@ pub fn init() -> Result<(), Error> {
 pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
     let query = format!(
         r#"SELECT * FROM "hashes_{}" WHERE save_id = "{save_id}";"#,
-        &project.id.as_ref().unwrap(),
+        project.id.as_ref().unwrap(),
     );
     let Ok(files): Result<Vec<SavedFile>, _> =
         sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
@@ -196,7 +196,7 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
 pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
     let query = format!(
         r#"SELECT * FROM "saves_{}" ORDER BY timestamp DESC LIMIT {limit};"#,
-        &project.id.as_ref().unwrap(),
+        project.id.as_ref().unwrap(),
     );
     let Ok(saves): Result<Vec<Save>, _> = sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
     else {
