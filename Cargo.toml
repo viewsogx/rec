@@ -5,7 +5,7 @@ edition = "2024"
 repository = "https://github.com/viewsogx/rec"
 authors = ["viewsogx"]
 description = "Version control CLI"
-license = "MIT"
+license = "APGL-3.0"
 
 [package.metadata.wix]
 upgrade-guid = "12175748-7759-4787-A163-DFF0C84A7E18"
