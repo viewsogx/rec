@@ -110,13 +110,15 @@ async fn main() {
     }
     let project = project;
 
+    let project_id = &project.id.as_ref().unwrap();
     let create_hash_table = format!(
-        "CREATE TABLE IF NOT EXISTS 'hashes_{}' (id INTEGER PRIMARY KEY AUTOINCREMENT, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, size TEXT NOT NULL, cdata BLOB NOT NULL);",
-        &project.id.as_ref().unwrap()
+        r#"CREATE TABLE IF NOT EXISTS "hashes_{project_id}" (id TEXT PRIMARY KEY, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, size TEXT NOT NULL, location TEXT, cdata BLOB);
+        CREATE INDEX "idx_hashes_{project_id}"
+        ON "hashes_{project_id}"(hash);
+        "#
     );
     let create_save_table = format!(
-        "CREATE TABLE IF NOT EXISTS 'saves_{}' (id TEXT PRIMARY KEY NOT NULL, timestamp TEXT NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);",
-        &project.id.as_ref().unwrap()
+        r#"CREATE TABLE IF NOT EXISTS "saves_{project_id}" (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);"#
     );
     sqlx::query(AssertSqlSafe(create_hash_table))
         .execute(&db)

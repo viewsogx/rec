@@ -9,7 +9,11 @@ use std::{
     fs::{self},
     path::Path,
 };
-use zstd::{bulk::decompress, compress_file};
+use zstd::{
+    bulk::{compress, decompress},
+    compress_file,
+    zstd_safe::WriteBuf,
+};
 
 pub async fn save(
     db: &Pool<Sqlite>,
@@ -20,16 +24,16 @@ pub async fn save(
 ) -> Result<(), Error> {
     save_files(db, dir, comment, project, save_id).await?;
     let insert_query = format!(
-        "INSERT INTO 'saves_{}'
+        r#"INSERT INTO "saves_{}"
 ( id, timestamp, branch, comment)
-VALUES ( ?, ?, ?, ?)",
+VALUES ( ?, ?, ?, ?);"#,
         &project.id.as_ref().unwrap()
     );
     sqlx::query(AssertSqlSafe(insert_query))
-        .bind(&save_id)
+        .bind(save_id)
         .bind(get_timestamp().to_string())
         .bind(&project.branch)
-        .bind(&comment)
+        .bind(comment)
         .execute(db)
         .await?;
     Ok(())
@@ -46,7 +50,7 @@ pub async fn save_files(
         let entry = entry?;
         let path = entry.path();
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let absolute_path = path.canonicalize()?;
+        let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
 
         if project.ignore.contains(&file_name) {
             continue;
@@ -54,21 +58,54 @@ pub async fn save_files(
         if path.is_dir() {
             Box::pin(save_files(db, &path, comment, project, &save_id)).await?;
         } else {
-            let compressed_data = compress_file(&path, 3)?;
-            let file_hash = blake3::hash(fs::read(&path)?.as_slice());
             let file_size = fs::metadata(&path)?.len();
+            if file_size > 1_000_000_000 {
+                continue;
+            }
+            let file_content = fs::read(&path)?;
+            let file_hash = blake3::hash(&file_content).to_hex().to_string();
 
+            // CHECK IF FILE CHANGED
+            let query = format!(
+                r#"
+                SELECT h.*
+                FROM "hashes_{}" AS h
+                JOIN "saves_{}" AS s
+                    ON s.id = h.save_id
+                WHERE h.hash = ?
+                LIMIT 1
+                "#,
+                project.id.as_ref().unwrap(),
+                project.id.as_ref().unwrap(),
+            );
+
+            let prev_save: Option<SavedFile> = sqlx::query_as(AssertSqlSafe(query))
+                .bind(&file_hash)
+                .fetch_optional(db)
+                .await?;
+
+            let location = prev_save.map(|save| save.id);
+
+            let compressed_data: Option<Vec<u8>> = if location.is_none() {
+                Some(compress(file_content.as_slice(), 3)?)
+            } else {
+                None
+            };
+
+            // INSERT NEW HASH
             let insert_query = format!(
-                "INSERT INTO 'hashes_{}'
-        ( save_id, file_name, hash, size, cdata)
-        VALUES ( ?, ?, ?, ?, ?)",
+                r#"INSERT INTO "hashes_{}"
+        (id, save_id, file_name, hash, size, location, cdata)
+        VALUES ( ?, ?, ?, ?, ?, ?, ?);"#,
                 &project.id.as_ref().unwrap()
             );
             sqlx::query(AssertSqlSafe(insert_query))
-                .bind(&save_id)
-                .bind(&absolute_path.to_string_lossy().to_string())
-                .bind(file_hash.to_hex().to_string())
+                .bind(generate_id(8))
+                .bind(save_id)
+                .bind(absolute_path)
+                .bind(file_hash)
                 .bind(file_size.to_string())
+                .bind(location)
                 .bind(compressed_data)
                 .execute(db)
                 .await?;
@@ -98,7 +135,7 @@ pub fn init() -> Result<(), Error> {
 
 pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
     let query = format!(
-        "SELECT file_name as name, hash, size, cdata FROM 'hashes_{}' WHERE save_id = '{save_id}'",
+        r#"SELECT file_name as name, hash, size, cdata FROM "hashes_{}" WHERE save_id = "{save_id}";"#,
         &project.id.as_ref().unwrap(),
     );
     let Ok(files): Result<Vec<SavedFile>, _> =
@@ -132,10 +169,9 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
 }
 
 pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
-    let project_id = &project.id.as_ref().unwrap();
     let query = format!(
-        "SELECT * FROM 'saves_{}' ORDER BY timestamp DESC LIMIT {limit}",
-        project_id,
+        r#"SELECT * FROM "saves_{}" ORDER BY timestamp DESC LIMIT {limit};"#,
+        &project.id.as_ref().unwrap(),
     );
     let Ok(saves): Result<Vec<Save>, _> = sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
     else {
