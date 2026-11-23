@@ -99,6 +99,9 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
 
     for file in files {
         let size: usize = file.size.parse()?;
+        if file.name.contains("rec.toml") {
+            continue;
+        }
         fs::write(&file.name, decompress(&file.cdata, size)?)
             .map_err(|e| anyhow::anyhow!("Failed to restore '{}': {}", file.name, e))?;
     }
