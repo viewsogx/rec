@@ -158,11 +158,39 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     )
     .await?;
     for file in files {
-        let size: usize = file.size.parse()?;
         if file.name.contains("rec.toml") {
             continue;
         }
-        fs::write(&file.name, decompress(&file.cdata, size)?)
+
+        let size: usize = file.size.parse()?;
+
+        let data = if let Some(location) = &file.location {
+            let query = format!(
+                r#"
+                SELECT h.*
+                FROM "hashes_{}" AS h
+                WHERE h.id = ?
+                LIMIT 1
+                "#,
+                project.id.as_ref().unwrap(),
+            );
+
+            let prev_save: SavedFile = sqlx::query_as(AssertSqlSafe(query))
+                .bind(location)
+                .fetch_one(db)
+                .await?;
+
+            prev_save
+                .cdata
+                .ok_or_else(|| Error::msg("Missing compressed file data"))?
+        } else {
+            file.cdata
+                .ok_or_else(|| Error::msg("Missing compressed file data"))?
+        };
+
+        let decompressed = decompress(&data, size)?;
+
+        fs::write(&file.name, decompressed)
             .map_err(|e| anyhow::anyhow!("Failed to restore '{}': {}", file.name, e))?;
     }
     Ok(())
