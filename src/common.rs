@@ -24,7 +24,8 @@ pub struct Config {
 #[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct SavedFile {
     pub id: String,
-    pub name: String,
+    pub save_id: String,
+    pub file_name: String,
     pub hash: String,
     pub size: String,
     pub location: Option<String>,

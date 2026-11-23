@@ -135,7 +135,7 @@ pub fn init() -> Result<(), Error> {
 
 pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
     let query = format!(
-        r#"SELECT file_name as name, hash, size, cdata FROM "hashes_{}" WHERE save_id = "{save_id}";"#,
+        r#"SELECT * FROM "hashes_{}" WHERE save_id = "{save_id}";"#,
         &project.id.as_ref().unwrap(),
     );
     let Ok(files): Result<Vec<SavedFile>, _> =
@@ -158,7 +158,7 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     )
     .await?;
     for file in files {
-        if file.name.contains("rec.toml") {
+        if file.file_name.contains("rec.toml") {
             continue;
         }
 
@@ -190,8 +190,8 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
 
         let decompressed = decompress(&data, size)?;
 
-        fs::write(&file.name, decompressed)
-            .map_err(|e| anyhow::anyhow!("Failed to restore '{}': {}", file.name, e))?;
+        fs::write(&file.file_name, decompressed)
+            .map_err(|e| anyhow::anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
     }
     Ok(())
 }
