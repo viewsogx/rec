@@ -1,19 +1,15 @@
-use anyhow::Error;
-use sqlx::{AssertSqlSafe, Pool, Sqlite};
-
-use zstd::{bulk::decompress, compress_file};
-
 use crate::{
-    Config, Project,
-    common::{Save, SavedFile},
+    common::{Config, Project, Save, SavedFile},
     utils::{generate_id, get_timestamp},
 };
-use colored::*;
+use anyhow::Error;
+use sqlx::{AssertSqlSafe, Pool, Sqlite};
 use std::{
     env,
     fs::{self},
     path::Path,
 };
+use zstd::{bulk::decompress, compress_file};
 
 pub async fn save(
     db: &Pool<Sqlite>,

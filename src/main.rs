@@ -1,27 +1,13 @@
+mod commands;
+mod common;
+mod utils;
+
+use crate::common::Config;
+use crate::utils::generate_id;
 use colored::Colorize;
+use common::ALL_COMMANDS;
 use sqlx::{AssertSqlSafe, SqlitePool, sqlite::SqliteConnectOptions};
 use std::{env, fs, io, path::Path, process::exit};
-mod common;
-use common::ALL_COMMANDS;
-mod commands;
-mod utils;
-use serde::{Deserialize, Serialize};
-
-use crate::utils::{generate_id, get_timestamp};
-
-#[derive(Deserialize, Debug, Serialize, Default)]
-struct Project {
-    ignore: Vec<String>,
-    name: String,
-    remote: String,
-    branch: String,
-    id: Option<String>,
-}
-
-#[derive(Deserialize, Serialize)]
-struct Config {
-    config: Project,
-}
 
 fn print_all_commands() {
     println!(

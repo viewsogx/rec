@@ -7,6 +7,20 @@ pub struct Command {
     pub description: &'static str,
 }
 
+#[derive(Deserialize, Debug, Serialize, Default)]
+pub struct Project {
+    pub ignore: Vec<String>,
+    pub name: String,
+    pub remote: String,
+    pub branch: String,
+    pub id: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Config {
+    pub config: Project,
+}
+
 #[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct SavedFile {
     pub name: String,
