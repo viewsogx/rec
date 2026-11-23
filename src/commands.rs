@@ -9,11 +9,7 @@ use std::{
     fs::{self},
     path::Path,
 };
-use zstd::{
-    bulk::{compress, decompress},
-    compress_file,
-    zstd_safe::WriteBuf,
-};
+use zstd::bulk::{compress, decompress};
 
 pub async fn save(
     db: &Pool<Sqlite>,
@@ -59,9 +55,10 @@ pub async fn save_files(
             Box::pin(save_files(db, &path, comment, project, &save_id)).await?;
         } else {
             let file_size = fs::metadata(&path)?.len();
-            if file_size > 1_000_000_000 {
+            if file_size > 2_100_000_000 {
                 continue;
             }
+            let compression_level = if file_size > 500_000_000 { 10 } else { 3 };
             let file_content = fs::read(&path)?;
             let file_hash = blake3::hash(&file_content).to_hex().to_string();
 
@@ -87,7 +84,7 @@ pub async fn save_files(
             let location = prev_save.map(|save| save.id);
 
             let compressed_data: Option<Vec<u8>> = if location.is_none() {
-                Some(compress(file_content.as_slice(), 3)?)
+                Some(compress(file_content.as_slice(), compression_level)?)
             } else {
                 None
             };
