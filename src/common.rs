@@ -1,5 +1,5 @@
+use rusqlite_from_row::FromRow;
 use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
 
 pub struct Command {
     pub name: &'static str,
@@ -7,7 +7,7 @@ pub struct Command {
     pub description: &'static str,
 }
 
-#[derive(Deserialize, Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Project {
     pub ignore: Vec<String>,
     pub name: String,
@@ -21,7 +21,7 @@ pub struct Config {
     pub config: Project,
 }
 
-#[derive(Deserialize, Serialize, FromRow, Debug)]
+#[derive(FromRow, Debug)]
 pub struct SavedFile {
     pub id: String,
     pub save_id: String,

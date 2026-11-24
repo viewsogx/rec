@@ -6,7 +6,7 @@ use crate::common::Config;
 use crate::utils::generate_id;
 use colored::Colorize;
 use common::ALL_COMMANDS;
-use sqlx::{AssertSqlSafe, SqlitePool, sqlite::SqliteConnectOptions};
+use rusqlite::Connection;
 use std::{env, fs, io, path::Path, process::exit};
 
 fn print_all_commands() {
@@ -25,8 +25,7 @@ fn print_all_commands() {
     println!("")
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     colored::control::set_override(true);
 
     #[cfg(windows)]
@@ -45,18 +44,15 @@ async fn main() {
     let data_dir = dirs::data_dir().expect("no data dir").join(".rec");
 
     fs::create_dir_all(data_dir.join("data")).unwrap();
-    let hashes_location = data_dir.join("data").join("data.sqlite");
+    let db_location = data_dir.join("data").join("data.sqlite");
 
     #[cfg(windows)]
     hf::hide(&data_dir).unwrap();
 
-    let db = SqlitePool::connect_with(
-        SqliteConnectOptions::new()
-            .filename(hashes_location)
-            .create_if_missing(true),
-    )
-    .await
-    .unwrap();
+    let Ok(db) = Connection::open(db_location) else {
+        eprintln!("Couldn't connect to local database.");
+        return;
+    };
 
     if (command == "i" || command == "init") && args.len() > 1 {
         eprintln!(
@@ -120,14 +116,8 @@ async fn main() {
     let create_save_table = format!(
         r#"CREATE TABLE IF NOT EXISTS "saves_{project_id}" (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);"#
     );
-    sqlx::query(AssertSqlSafe(create_hash_table))
-        .execute(&db)
-        .await
-        .unwrap();
-    sqlx::query(AssertSqlSafe(create_save_table))
-        .execute(&db)
-        .await
-        .unwrap();
+    db.execute(&create_hash_table, []).unwrap();
+    db.execute(&create_save_table, []).unwrap();
 
     // handle commands
     match command {
@@ -142,7 +132,7 @@ async fn main() {
             } else {
                 println!("{}", "Saving files...".bright_green());
                 if let Err(error) =
-                    commands::save(&db, Path::new("."), &args[1], &project, &generate_id(8)).await
+                    commands::save(&db, Path::new("."), &args[1], &project, &generate_id(8))
                 {
                     eprintln!("{error}")
                 }
@@ -165,7 +155,7 @@ async fn main() {
                 );
             } else {
                 let save_id = &args[1];
-                if let Err(error) = commands::load(&db, save_id, &project).await {
+                if let Err(error) = commands::load(&db, save_id, &project) {
                     eprintln!("{error}");
                     return;
                 }
@@ -185,7 +175,7 @@ async fn main() {
                     if limit <= 0 {
                         eprintln!("Limit must be a positive number.")
                     } else {
-                        match commands::log(&db, &project, limit).await {
+                        match commands::log(&db, &project, limit) {
                             Err(err) => {
                                 eprintln!("{err}")
                             }

@@ -3,7 +3,8 @@ use crate::{
     utils::{generate_id, get_timestamp},
 };
 use anyhow::Error;
-use sqlx::{AssertSqlSafe, Pool, Sqlite};
+use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite_from_row::FromRow;
 use std::{
     env,
     fs::{self},
@@ -11,32 +12,35 @@ use std::{
 };
 use zstd::bulk::{compress, decompress};
 
-pub async fn save(
-    db: &Pool<Sqlite>,
+pub fn save(
+    db: &Connection,
     dir: &Path,
     comment: &str,
     project: &Project,
     save_id: &String,
 ) -> Result<(), Error> {
-    save_files(db, dir, comment, project, save_id).await?;
+    save_files(db, dir, comment, project, save_id)?;
     let insert_query = format!(
         r#"INSERT INTO "saves_{}"
 ( id, timestamp, branch, comment)
 VALUES ( ?, ?, ?, ?);"#,
         project.id.as_ref().unwrap()
     );
-    sqlx::query(AssertSqlSafe(insert_query))
-        .bind(save_id)
-        .bind(get_timestamp().to_string())
-        .bind(&project.branch)
-        .bind(comment)
-        .execute(db)
-        .await?;
+    db.execute(
+        &insert_query,
+        params![
+            save_id,
+            get_timestamp().to_string(),
+            &project.branch,
+            comment
+        ],
+    )?;
+
     Ok(())
 }
 
-pub async fn save_files(
-    db: &Pool<Sqlite>,
+pub fn save_files(
+    db: &Connection,
     dir: &Path,
     comment: &str,
     project: &Project,
@@ -52,7 +56,7 @@ pub async fn save_files(
             continue;
         }
         if path.is_dir() {
-            Box::pin(save_files(db, &path, comment, project, &save_id)).await?;
+            save_files(db, &path, comment, project, &save_id)?;
         } else {
             let file_size = fs::metadata(&path)?.len();
             if file_size > 2_100_000_000 {
@@ -81,11 +85,10 @@ pub async fn save_files(
                 project.id.as_ref().unwrap(),
                 project.id.as_ref().unwrap(),
             );
-
-            let prev_save: Option<SavedFile> = sqlx::query_as(AssertSqlSafe(query))
-                .bind(&file_hash)
-                .fetch_optional(db)
-                .await?;
+            let prev_save: Option<SavedFile> = db
+                .query_row(&query, params![&file_hash], SavedFile::try_from_row)
+                .optional()
+                .unwrap();
 
             let location = prev_save.map(|save| save.id);
 
@@ -102,16 +105,18 @@ pub async fn save_files(
         VALUES ( ?, ?, ?, ?, ?, ?, ?);"#,
                 project.id.as_ref().unwrap()
             );
-            sqlx::query(AssertSqlSafe(insert_query))
-                .bind(generate_id(8))
-                .bind(save_id)
-                .bind(absolute_path)
-                .bind(file_hash)
-                .bind(file_size.to_string())
-                .bind(location)
-                .bind(compressed_data)
-                .execute(db)
-                .await?;
+            db.execute(
+                &insert_query,
+                params![
+                    generate_id(8),
+                    save_id,
+                    absolute_path,
+                    file_hash,
+                    file_size.to_string(),
+                    location,
+                    compressed_data
+                ],
+            )?;
         }
     }
 
@@ -136,13 +141,15 @@ pub fn init() -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Result<(), Error> {
+pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), Error> {
     let query = format!(
         r#"SELECT * FROM "hashes_{}" WHERE save_id = "{save_id}";"#,
         project.id.as_ref().unwrap(),
     );
-    let Ok(files): Result<Vec<SavedFile>, _> =
-        sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
+    let Ok(files): Result<Vec<SavedFile>, _> = db
+        .prepare(&query)?
+        .query_map([], SavedFile::try_from_row)?
+        .collect()
     else {
         return Err(Error::msg(format!(
             "Unexpected error occurred while loading save: {save_id}"
@@ -158,8 +165,7 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
         &format!("<< Loaded save: {save_id}"),
         project,
         &generate_id(8),
-    )
-    .await?;
+    )?;
     for file in files {
         if file.file_name.contains("rec.toml") {
             continue;
@@ -178,10 +184,7 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
                 project.id.as_ref().unwrap(),
             );
 
-            let prev_save: SavedFile = sqlx::query_as(AssertSqlSafe(query))
-                .bind(location)
-                .fetch_one(db)
-                .await?;
+            let prev_save: SavedFile = db.query_row(&query, [location], SavedFile::try_from_row)?;
 
             prev_save
                 .cdata
@@ -199,12 +202,15 @@ pub async fn load(db: &Pool<Sqlite>, save_id: &String, project: &Project) -> Res
     Ok(())
 }
 
-pub async fn log(db: &Pool<Sqlite>, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
+pub fn log(db: &Connection, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
     let query = format!(
         r#"SELECT * FROM "saves_{}" ORDER BY timestamp DESC LIMIT {limit};"#,
         project.id.as_ref().unwrap(),
     );
-    let Ok(saves): Result<Vec<Save>, _> = sqlx::query_as(AssertSqlSafe(query)).fetch_all(db).await
+    let Ok(saves): Result<Vec<Save>, _> = db
+        .prepare(&query)?
+        .query_map([], Save::try_from_row)?
+        .collect()
     else {
         return Err(Error::msg(format!(
             "Unexpected error occurred while fetching saves for project: {}",
