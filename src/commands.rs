@@ -12,14 +12,9 @@ use std::{
 };
 use zstd::bulk::{compress, decompress};
 
-pub fn save(
-    db: &Connection,
-    dir: &Path,
-    comment: &str,
-    project: &Project,
-    save_id: &String,
-) -> Result<(), Error> {
-    save_files(db, dir, comment, project, save_id)?;
+pub fn save(db: &Connection, comment: &str, project: &Project) -> Result<(), Error> {
+    let save_id = generate_id(8);
+    save_files(db, Path::new("."), comment, project, &save_id)?;
     let insert_query = format!(
         r#"INSERT INTO "saves_{}"
 ( id, timestamp, branch, comment)
@@ -159,13 +154,7 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
     if files.len() == 0 {
         return Err(Error::msg("No matching save found"));
     }
-    save(
-        db,
-        Path::new("."),
-        &format!("<< Loaded save: {save_id}"),
-        project,
-        &generate_id(8),
-    )?;
+    save(db, &format!("<< Loaded save: {save_id}"), project)?;
     for file in files {
         if file.file_name.contains("rec.toml") {
             continue;

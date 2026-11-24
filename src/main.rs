@@ -176,7 +176,7 @@ fn save_command(args: &[String]) {
     };
 
     println!("{}", "Saving files...".bright_green());
-    if let Err(error) = commands::save(&db, Path::new("."), &args[1], &project, &generate_id(8)) {
+    if let Err(error) = commands::save(&db, &args[1], &project) {
         eprintln!("{error}")
     }
 }
