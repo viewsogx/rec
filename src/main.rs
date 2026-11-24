@@ -68,6 +68,7 @@ fn main() {
             if let Err(err) = commands::init() {
                 eprintln!("Failed to initialize project:\n{}", err.to_string());
             };
+            println!("{}", "Successfully initialized project.".bright_green());
             return;
         }
         eprintln!("{} file couldn't be found.", "rec.toml".red());
@@ -81,6 +82,7 @@ fn main() {
         if answer.trim().to_lowercase() == "y" {
             if let Err(err) = commands::init() {
                 eprintln!("Failed to initialize project:\n{}", err.to_string());
+                println!("{}", "Successfully initialized project.".bright_green());
                 return;
             };
             println!(
@@ -116,7 +118,7 @@ fn main() {
     let create_save_table = format!(
         r#"CREATE TABLE IF NOT EXISTS "saves_{project_id}" (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, branch TEXT NOT NULL, comment TEXT NOT NULL);"#
     );
-    db.execute(&create_hash_table, []).unwrap();
+    db.execute_batch(&create_hash_table).unwrap();
     db.execute(&create_save_table, []).unwrap();
 
     // handle commands
