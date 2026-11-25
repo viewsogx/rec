@@ -33,7 +33,7 @@ pub struct File {
 #[derive(Debug)]
 pub struct ShortFile {
     pub file_name: String,
-    pub size: String,
+    pub size: u64,
 }
 
 #[derive(FromRow, Debug)]

@@ -3,7 +3,7 @@ mod common;
 mod utils;
 
 use crate::commands::{init, load, log, save};
-use crate::common::{Config, Project, ShortFile};
+use crate::common::{Config, Project};
 use crate::utils::generate_id;
 use colored::Colorize;
 use common::ALL_COMMANDS;
@@ -176,16 +176,18 @@ fn save_command(args: &[String]) {
         return;
     };
     println!("{}", "Saving files...".bright_green());
-    let mut large_files: Vec<ShortFile> = Vec::new();
-    if let Err(error) = save(&db, &args[1], &project, Some(&mut large_files)) {
-        eprintln!("{error}")
-    }
+    let large_files = match save(&db, &args[1], &project) {
+        Ok(large_files) => large_files,
+        Err(error) => {
+            eprintln!("{error}");
+            return;
+        }
+    };
     if !large_files.is_empty() {
         println!("Couldn't save files over 2GB: ");
 
         for file in large_files {
-            let megabytes: u64 = file.size.parse().unwrap();
-            println!("\t{} - {} MB", file.file_name, megabytes / 1_000_000)
+            println!("\t{} - {} MB", file.file_name, file.size / 1_000_000)
         }
     }
 }

@@ -12,21 +12,11 @@ use std::{
 };
 use zstd::bulk::{compress, decompress};
 
-pub fn save(
-    db: &Connection,
-    comment: &str,
-    project: &Project,
-    mut large_files: Option<&mut Vec<ShortFile>>,
-) -> Result<(), Error> {
+/// Saves the current working directory and returns the files that were too
+/// large to be stored.
+pub fn save(db: &Connection, comment: &str, project: &Project) -> Result<Vec<ShortFile>, Error> {
     let save_id = generate_id(8);
-    save_files(
-        db,
-        Path::new("."),
-        comment,
-        project,
-        &save_id,
-        large_files.as_mut().map(|files| &mut **files),
-    )?;
+    let large_files = save_files(db, Path::new("."), project, &save_id)?;
     let insert_query = format!(
         r#"INSERT INTO "saves_{}"
 ( id, timestamp, branch, comment)
@@ -43,17 +33,17 @@ VALUES ( ?, ?, ?, ?);"#,
         ],
     )?;
 
-    Ok(())
+    Ok(large_files)
 }
 
 fn save_files(
     db: &Connection,
     dir: &Path,
-    comment: &str,
     project: &Project,
-    save_id: &String,
-    mut large_files: Option<&mut Vec<ShortFile>>,
-) -> Result<(), Error> {
+    save_id: &str,
+) -> Result<Vec<ShortFile>, Error> {
+    let mut large_files = Vec::new();
+
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -64,23 +54,14 @@ fn save_files(
             continue;
         }
         if path.is_dir() {
-            save_files(
-                db,
-                &path,
-                comment,
-                project,
-                &save_id,
-                large_files.as_mut().map(|files| &mut **files),
-            )?;
+            large_files.extend(save_files(db, &path, project, save_id)?);
         } else {
             let file_size = fs::metadata(&path)?.len();
             if file_size > 2_100_000_000 {
-                if let Some(large_files) = large_files.as_mut() {
-                    large_files.push(ShortFile {
-                        file_name,
-                        size: file_size.to_string(),
-                    });
-                }
+                large_files.push(ShortFile {
+                    file_name,
+                    size: file_size,
+                });
                 continue;
             }
             let compression_level = if file_size > 500_000_000 {
@@ -126,7 +107,7 @@ fn save_files(
         }
     }
 
-    Ok(())
+    Ok(large_files)
 }
 
 pub fn init() -> Result<(), Error> {
@@ -165,7 +146,7 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
     if files.len() == 0 {
         return Err(Error::msg("No matching save found"));
     }
-    save(db, &format!("<< Loaded save: {save_id} >>"), project, None)?;
+    save(db, &format!("<< Loaded save: {save_id} >>"), project)?;
     for file in files {
         let file_path = Path::new(&file.file_name);
         let file_name = &file_path.file_name().unwrap().to_string_lossy().to_string();
