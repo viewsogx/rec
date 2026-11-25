@@ -2,7 +2,8 @@ mod commands;
 mod common;
 mod utils;
 
-use crate::common::{Config, Project};
+use crate::commands::{init, load, log, save};
+use crate::common::{Config, Project, ShortFile};
 use crate::utils::generate_id;
 use colored::Colorize;
 use common::ALL_COMMANDS;
@@ -58,7 +59,7 @@ fn init_command(args: &[String]) {
         return;
     }
 
-    if let Err(err) = commands::init() {
+    if let Err(err) = init() {
         eprintln!("Failed to initialize project:\n{}", err.to_string());
         return;
     }
@@ -76,7 +77,7 @@ fn load_project() -> Option<Project> {
         io::stdin().read_line(&mut answer).unwrap();
 
         if answer.trim().to_lowercase() == "y" {
-            match commands::init() {
+            match init() {
                 Ok(()) => println!(
                     "{}",
                     "Successfully initialized rec project (rec.toml created)".bright_green()
@@ -174,10 +175,18 @@ fn save_command(args: &[String]) {
     let Some((db, project)) = open_project() else {
         return;
     };
-
     println!("{}", "Saving files...".bright_green());
-    if let Err(error) = commands::save(&db, &args[1], &project) {
+    let mut large_files: Vec<ShortFile> = Vec::new();
+    if let Err(error) = save(&db, &args[1], &project, Some(&mut large_files)) {
         eprintln!("{error}")
+    }
+    if !large_files.is_empty() {
+        println!("Couldn't save files over 2GB: ");
+
+        for file in large_files {
+            let megabytes: u64 = file.size.parse().unwrap();
+            println!("\t{} - {} MB", file.file_name, megabytes / 1_000_000)
+        }
     }
 }
 
@@ -197,7 +206,7 @@ fn load_command(args: &[String]) {
         return;
     };
 
-    if let Err(error) = commands::load(&db, save_id, &project) {
+    if let Err(error) = load(&db, save_id, &project) {
         eprintln!("{error}");
         return;
     }
@@ -228,7 +237,7 @@ fn log_command(args: &[String]) {
         return;
     };
 
-    match commands::log(&db, &project, limit) {
+    match log(&db, &project, limit) {
         Err(err) => {
             eprintln!("{err}")
         }

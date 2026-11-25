@@ -30,6 +30,12 @@ pub struct File {
     pub size: String,
 }
 
+#[derive(Debug)]
+pub struct ShortFile {
+    pub file_name: String,
+    pub size: String,
+}
+
 #[derive(FromRow, Debug)]
 pub struct Save {
     pub id: String,
