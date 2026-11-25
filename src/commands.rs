@@ -156,7 +156,9 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
             return Err(anyhow!("No save found for file: {}", file.file_name));
         };
         // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
-        // TODO: DELETE ALL NON SAVED FILES FROM DIR
+        // TODO: 
+        // DELETE ALL NON SAVED FILES FROM DIR
+        // FIX NESTED DIRECTORY CREATION ERR
         let decompressed = decompress(&data, size)?;
         if !fs::exists(&file.file_name)? {
             if let Some(path) = Path::new(&file.file_name).parent() {
