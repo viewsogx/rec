@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "rec-cli"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "blake3",
@@ -521,7 +521,7 @@ dependencies = [
 
 [[package]]
 name = "rec-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "blake3",
