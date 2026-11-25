@@ -10,3 +10,8 @@ repository = "https://github.com/viewsogx/rec"
 
 [workspace.dependencies]
 rec-core = { path = "rec-core" }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

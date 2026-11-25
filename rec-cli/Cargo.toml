@@ -7,6 +7,12 @@ description = "Version control CLI"
 license = "APGL-3.0"
 repository.workspace = true
 
+[package.metadata.wix]
+upgrade-guid = "FC56886F-BFF6-41B9-9CB7-42D2D061CEDA"
+path-guid = "A048F20D-E193-4F11-906B-06613E588141"
+license = false
+eula = false
+
 
 [[bin]]
 name = "rec"
