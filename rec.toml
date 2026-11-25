@@ -1,6 +1,6 @@
 [config]
-name = "some-project"
-ignore = ["target", ".gitignore", ".git", "rec.exe"]
+name = "rec"
+ignore = ["target", ".git", "rec.exe"]
 remote = "https://recbase.live/viewsogx"
 branch = "main"
 id = "9ccc861b"

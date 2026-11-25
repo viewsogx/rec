@@ -2,11 +2,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use nanoid::nanoid;
 
-pub fn get_timestamp() -> u128 {
+pub fn get_timestamp() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_millis()
+        .as_millis() as u64
 }
 pub fn generate_id(len: u8) -> String {
     const HEX: [char; 16] = [
