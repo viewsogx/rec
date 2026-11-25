@@ -157,8 +157,11 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         };
 
         let decompressed = decompress(&data, size)?;
+        let mut path = Path::new(&file.file_name).ancestors();
         if !fs::exists(&file.file_name)? {
-            fs::create_dir_all(&file.file_name)?
+            while let Some(dir) = path.next() {
+                fs::create_dir(dir)?;
+            }
         }
         fs::write(&file.file_name, decompressed)
             .map_err(|e| anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
