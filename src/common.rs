@@ -22,14 +22,12 @@ pub struct Config {
 }
 
 #[derive(FromRow, Debug)]
-pub struct SavedFile {
+pub struct File {
     pub id: String,
     pub save_id: String,
     pub file_name: String,
     pub hash: String,
     pub size: String,
-    pub location: Option<String>,
-    pub cdata: Option<Vec<u8>>,
 }
 
 #[derive(FromRow, Debug)]

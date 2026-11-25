@@ -129,7 +129,7 @@ fn open_db() -> Option<Connection> {
 fn create_project_tables(db: &Connection, project: &Project) -> bool {
     let project_id = project.id.as_ref().unwrap();
     let create_hash_table = format!(
-        r#"CREATE TABLE IF NOT EXISTS "hashes_{project_id}" (id TEXT PRIMARY KEY, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, size TEXT NOT NULL, location TEXT, cdata BLOB);
+        r#"CREATE TABLE IF NOT EXISTS "hashes_{project_id}" (id TEXT PRIMARY KEY, save_id TEXT NOT NULL, file_name TEXT NOT NULL, hash TEXT NOT NULL, size TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS "idx_hashes_{project_id}"
         ON "hashes_{project_id}"(hash);
         "#

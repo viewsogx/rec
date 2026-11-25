@@ -1,5 +1,5 @@
 use crate::{
-    common::{Config, Project, Save, SavedFile},
+    common::{Config, File, Project, Save},
     utils::{generate_id, get_timestamp},
 };
 use anyhow::Error;
@@ -67,37 +67,15 @@ pub fn save_files(
             let file_content = fs::read(&path)?;
             let file_hash = blake3::hash(&file_content).to_hex().to_string();
 
-            // CHECK IF FILE CHANGED
-            let query = format!(
-                r#"
-                SELECT h.*
-                FROM "hashes_{}" AS h
-                JOIN "saves_{}" AS s
-                    ON s.id = h.save_id
-                WHERE h.hash = ?
-                LIMIT 1
-                "#,
-                project.id.as_ref().unwrap(),
-                project.id.as_ref().unwrap(),
-            );
-            let prev_save: Option<SavedFile> = db
-                .query_row(&query, params![&file_hash], SavedFile::try_from_row)
-                .optional()
-                .unwrap();
+            // TODO: SAVE FILE DATA IN HASH NAMED FILE
 
-            let location = prev_save.map(|save| save.id);
-
-            let compressed_data: Option<Vec<u8>> = if location.is_none() {
-                Some(compress(file_content.as_slice(), compression_level)?)
-            } else {
-                None
-            };
+            let compressed_data: Vec<u8> = compress(file_content.as_slice(), compression_level)?;
 
             // INSERT NEW HASH
             let insert_query = format!(
                 r#"INSERT INTO "hashes_{}"
-        (id, save_id, file_name, hash, size, location, cdata)
-        VALUES ( ?, ?, ?, ?, ?, ?, ?);"#,
+        (id, save_id, file_name, hash, size)
+        VALUES ( ?, ?, ?, ?, ?);"#,
                 project.id.as_ref().unwrap()
             );
             db.execute(
@@ -107,9 +85,7 @@ pub fn save_files(
                     save_id,
                     absolute_path,
                     file_hash,
-                    file_size.to_string(),
-                    location,
-                    compressed_data
+                    file_size.to_string()
                 ],
             )?;
         }
@@ -141,9 +117,9 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         r#"SELECT * FROM "hashes_{}" WHERE save_id = "{save_id}";"#,
         project.id.as_ref().unwrap(),
     );
-    let Ok(files): Result<Vec<SavedFile>, _> = db
+    let Ok(files): Result<Vec<File>, _> = db
         .prepare(&query)?
-        .query_map([], SavedFile::try_from_row)?
+        .query_map([], File::try_from_row)?
         .collect()
     else {
         return Err(Error::msg(format!(
@@ -154,7 +130,7 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
     if files.len() == 0 {
         return Err(Error::msg("No matching save found"));
     }
-    save(db, &format!("<< Loaded save: {save_id}"), project)?;
+    save(db, &format!("<< Loaded save: {save_id} >>"), project)?;
     for file in files {
         if file.file_name.contains("rec.toml") {
             continue;
@@ -162,26 +138,8 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
 
         let size: usize = file.size.parse()?;
 
-        let data = if let Some(location) = &file.location {
-            let query = format!(
-                r#"
-                SELECT h.*
-                FROM "hashes_{}" AS h
-                WHERE h.id = ?
-                LIMIT 1
-                "#,
-                project.id.as_ref().unwrap(),
-            );
-
-            let prev_save: SavedFile = db.query_row(&query, [location], SavedFile::try_from_row)?;
-
-            prev_save
-                .cdata
-                .ok_or_else(|| Error::msg("Missing compressed file data"))?
-        } else {
-            file.cdata
-                .ok_or_else(|| Error::msg("Missing compressed file data"))?
-        };
+        // TODO: READ FILE DATA FROM HASH NAMED FOLDERS
+        let data = Vec::new();
 
         let decompressed = decompress(&data, size)?;
 
