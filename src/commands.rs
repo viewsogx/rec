@@ -141,7 +141,12 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
     }
     save(db, &format!("<< Loaded save: {save_id} >>"), project)?;
     for file in files {
-        if file.file_name.contains("rec.toml") {
+        let file_name = &Path::new(&file.file_name)
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        if file_name == "rec.toml" || project.ignore.contains(file_name) {
             continue;
         }
 
@@ -156,14 +161,13 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
             return Err(anyhow!("No save found for file: {}", file.file_name));
         };
         // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
-        // TODO: 
+        // TODO:
         // DELETE ALL NON SAVED FILES FROM DIR
         // FIX NESTED DIRECTORY CREATION ERR
         let decompressed = decompress(&data, size)?;
         if !fs::exists(&file.file_name)? {
-            if let Some(path) = Path::new(&file.file_name).parent() {
-                fs::create_dir_all(path)?;
-            }
+            let path: Vec<&str> = file.file_name.split(file_name).collect();
+            fs::create_dir_all(path[0])?;
         }
         fs::write(&file.file_name, decompressed)
             .map_err(|e| anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
