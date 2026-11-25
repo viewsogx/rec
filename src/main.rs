@@ -109,7 +109,7 @@ fn load_project() -> Option<Project> {
 fn open_db() -> Option<Connection> {
     let data_dir = dirs::data_dir().expect("no data dir").join(".rec");
 
-    if let Err(err) = fs::create_dir_all(data_dir.join("data")) {
+    if let Err(err) = fs::create_dir_all(data_dir.join("db")) {
         eprintln!("Couldn't create data directory:\n{}", err.to_string());
         return None;
     }
@@ -117,7 +117,7 @@ fn open_db() -> Option<Connection> {
     #[cfg(windows)]
     hf::hide(&data_dir).unwrap();
 
-    match Connection::open(data_dir.join("data").join("data.sqlite")) {
+    match Connection::open(data_dir.join("db").join("data.sqlite")) {
         Ok(db) => Some(db),
         Err(_) => {
             eprintln!("Couldn't connect to local database.");

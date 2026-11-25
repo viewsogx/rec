@@ -2,8 +2,8 @@ use crate::{
     common::{Config, File, Project, Save},
     utils::{generate_id, get_timestamp},
 };
-use anyhow::Error;
-use rusqlite::{Connection, OptionalExtension, params};
+use anyhow::{Error, anyhow};
+use rusqlite::{Connection, params};
 use rusqlite_from_row::FromRow;
 use std::{
     env,
@@ -69,7 +69,18 @@ pub fn save_files(
 
             // TODO: SAVE FILE DATA IN HASH NAMED FILE
 
-            let compressed_data: Vec<u8> = compress(file_content.as_slice(), compression_level)?;
+            let data_dir = dirs::data_dir()
+                .expect("no data dir")
+                .join(".rec")
+                .join("data");
+            fs::create_dir_all(&data_dir)?;
+            let data_dir = data_dir.join(&file_hash);
+
+            if !fs::exists(&data_dir)? {
+                let compressed_data: Vec<u8> =
+                    compress(file_content.as_slice(), compression_level)?;
+                fs::write(data_dir, compressed_data)?
+            }
 
             // INSERT NEW HASH
             let insert_query = format!(
@@ -138,13 +149,20 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
 
         let size: usize = file.size.parse()?;
 
-        // TODO: READ FILE DATA FROM HASH NAMED FOLDERS
-        let data = Vec::new();
+        // TODO: READ FILE DATA FROM HASH NAMED FILES
+        let data_dir = dirs::data_dir()
+            .expect("no data dir")
+            .join(".rec")
+            .join("data")
+            .join(file.hash);
+        let Ok(data) = fs::read(data_dir) else {
+            return Err(anyhow!("No save found for file: {}", file.file_name));
+        };
 
         let decompressed = decompress(&data, size)?;
 
         fs::write(&file.file_name, decompressed)
-            .map_err(|e| anyhow::anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
+            .map_err(|e| anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
     }
     Ok(())
 }
