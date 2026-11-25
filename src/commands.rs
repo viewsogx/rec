@@ -67,8 +67,6 @@ pub fn save_files(
             let file_content = fs::read(&path)?;
             let file_hash = blake3::hash(&file_content).to_hex().to_string();
 
-            // TODO: SAVE FILE DATA IN HASH NAMED FILE
-
             let data_dir = dirs::data_dir()
                 .expect("no data dir")
                 .join(".rec")
@@ -149,7 +147,6 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
 
         let size: usize = file.size.parse()?;
 
-        // TODO: READ FILE DATA FROM HASH NAMED FILES
         let data_dir = dirs::data_dir()
             .expect("no data dir")
             .join(".rec")
@@ -160,7 +157,9 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         };
 
         let decompressed = decompress(&data, size)?;
-
+        if !fs::exists(&file.file_name)? {
+            fs::create_dir_all(&file.file_name)?
+        }
         fs::write(&file.file_name, decompressed)
             .map_err(|e| anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
     }
