@@ -502,8 +502,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "rec"
-version = "0.0.2"
+name = "rec-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "colored",
+ "dirs",
+ "hf",
+ "nanoid",
+ "rec-core",
+ "rusqlite",
+ "rusqlite-from-row",
+ "serde",
+ "toml",
+ "zstd",
+]
+
+[[package]]
+name = "rec-core"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",

@@ -1,0 +1,26 @@
+[package]
+name = "rec-cli"
+version.workspace = true
+edition.workspace = true
+repository = "https://github.com/viewsogx/rec/rec-cli"
+authors = ["viewsogx"]
+description = "Version control CLI"
+license = "APGL-3.0"
+
+[[bin]]
+name = "rec"
+path = "src/main.rs"
+
+[dependencies]
+rec-core.workspace = true
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+blake3 = "1.8.7"
+toml = "1.2.1"
+serde = { version = "1.0.229", features = ["derive"] }
+rusqlite-from-row = "0.2.5"
+nanoid = "0.5"
+anyhow = "1.0.104"
+hf = "0.6"
+colored = "3.1.1"
+zstd = "0.14.4"
+dirs = "7.0.0"

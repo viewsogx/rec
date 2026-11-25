@@ -1,6 +1,4 @@
 mod commands;
-mod common;
-mod utils;
 
 use crate::commands::{init, load, log, save};
 use crate::common::{Config, Project};

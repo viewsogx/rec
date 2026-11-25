@@ -1,3 +1,9 @@
 /target
 hash_db.db
 rec.exe
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target
