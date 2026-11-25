@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" alt="rec logo" width="480">
+  <img src="https://raw.githubusercontent.com/viewsogx/rec/main/public/logo.png" alt="rec logo" width="480">
 </p>
 
 <h1 align="center">rec</h1>
