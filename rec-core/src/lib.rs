@@ -1,8 +1,8 @@
-use crate::{
-    models::{Config, File, Project, Save, ShortFile},
-    utils::{generate_id, get_timestamp},
-};
+pub mod models;
+pub mod utils;
+
 use anyhow::{Error, anyhow};
+use models::{Config, File, Project, Save, ShortFile};
 use rusqlite::{Connection, params};
 use rusqlite_from_row::FromRow;
 use std::{
@@ -10,6 +10,7 @@ use std::{
     fs::{self},
     path::Path,
 };
+use utils::{generate_id, get_timestamp};
 use zstd::bulk::{compress, decompress};
 
 /// Saves the current working directory and returns the files that were too

@@ -1,12 +1,6 @@
 use rusqlite_from_row::FromRow;
 use serde::{Deserialize, Serialize};
 
-pub struct Command {
-    pub name: &'static str,
-    pub short: &'static str,
-    pub description: &'static str,
-}
-
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Project {
     pub ignore: Vec<String>,

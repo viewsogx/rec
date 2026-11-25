@@ -2,10 +2,11 @@
 name = "rec-cli"
 version.workspace = true
 edition.workspace = true
-repository = "https://github.com/viewsogx/rec/rec-cli"
 authors = ["viewsogx"]
 description = "Version control CLI"
 license = "APGL-3.0"
+repository.workspace = true
+
 
 [[bin]]
 name = "rec"

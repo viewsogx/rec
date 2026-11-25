@@ -1,10 +1,10 @@
 mod commands;
 
-use crate::commands::{init, load, log, save};
-use crate::common::{Config, Project};
-use crate::utils::generate_id;
 use colored::Colorize;
-use common::ALL_COMMANDS;
+use commands::ALL_COMMANDS;
+use rec_core::models::{Config, Project};
+use rec_core::utils::generate_id;
+use rec_core::{init, load, log, save};
 use rusqlite::Connection;
 use std::{env, fs, io, path::Path, process::exit};
 

@@ -1,3 +1,9 @@
+pub struct Command {
+    pub name: &'static str,
+    pub short: &'static str,
+    pub description: &'static str,
+}
+
 pub const ALL_COMMANDS: &[Command] = &[
     Command {
         name: "init",
@@ -52,7 +58,6 @@ pub const ALL_COMMANDS: &[Command] = &[
     Command {
         name: "sync",
         short: "sy",
-        description:
-            "Clones a remote repository or pulls the latest changes into the local repository",
+        description: "Clones a remote repository or pulls the latest changes into the local repository",
     },
 ];

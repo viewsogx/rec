@@ -2,6 +2,7 @@
 name = "rec-core"
 version.workspace = true
 edition.workspace = true
+repository.workspace = true
 
 [dependencies]
 rusqlite = { version = "0.43.0", features = ["bundled"] }
