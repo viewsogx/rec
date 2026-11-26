@@ -188,7 +188,7 @@ fn delete_not_saved(
     project: &Project,
     saved_paths: &Vec<&String>,
 ) -> Result<(), Error> {
-    for dir in fs::read_dir(path)? {
+    'dirloop: for dir in fs::read_dir(path)? {
         let entry = dir?.path();
         let existing_path = entry.canonicalize()?.to_string_lossy().to_string();
         let file_name = &entry.file_name().unwrap().to_string_lossy().to_string();
@@ -199,10 +199,13 @@ fn delete_not_saved(
         if entry.is_dir() {
             delete_not_saved(&entry, project, &saved_paths)?;
         } else {
-            for saved_path in saved_paths {
-                // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
-                println!("e: {existing_path} s: {saved_path}");
+            for &saved_path in saved_paths {
+                if saved_path == &existing_path {
+                    continue 'dirloop;
+                }
             }
+            fs::remove_dir_all(&existing_path)?;
+            println!("Removed: {existing_path}");
         }
     }
     Ok(())
