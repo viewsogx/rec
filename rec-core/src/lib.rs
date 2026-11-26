@@ -204,7 +204,10 @@ fn delete_not_saved(
                     continue 'dirloop;
                 }
             }
-            fs::remove_dir_all(&existing_path)?;
+            let Ok(_) = fs::remove_dir_all(&existing_path) else {
+                fs::remove_file(&existing_path)?;
+                continue;
+            };
             println!("Removed: {existing_path}");
         }
     }
