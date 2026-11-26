@@ -197,17 +197,14 @@ fn delete_not_saved(
         }
         if entry.is_dir() {
             delete_not_saved(&entry, project, &saved_paths)?;
+            let _ = fs::remove_dir(&entry);
         } else {
             for &saved_path in saved_paths {
                 if saved_path == &existing_path {
                     continue 'dirloop;
                 }
             }
-            let Ok(_) = fs::remove_dir_all(&existing_path) else {
-                fs::remove_file(&existing_path)?;
-                println!("Removed: {existing_path}");
-                continue;
-            };
+            fs::remove_file(&existing_path)?;
         }
     }
     Ok(())
