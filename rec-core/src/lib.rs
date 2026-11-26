@@ -182,13 +182,8 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
 }
 
 fn delete_not_saved(path: &Path, project: &Project, saved_paths: &[&String]) -> Result<(), Error> {
-    // Collect the entries before deleting any of them. Removing entries while a
-    // directory is still being iterated can cause siblings to be skipped.
-    let entries: Vec<_> = fs::read_dir(path)?
-        .map(|entry| entry.map(|entry| entry.path()))
-        .collect::<Result<_, _>>()?;
-
-    for entry in entries {
+    for entry in fs::read_dir(path)? {
+        let entry = entry?.path();
         let file_name = entry.file_name().unwrap().to_string_lossy().to_string();
         if is_ignored(project, &file_name) {
             continue;
@@ -196,27 +191,16 @@ fn delete_not_saved(path: &Path, project: &Project, saved_paths: &[&String]) -> 
 
         if entry.is_dir() {
             delete_not_saved(&entry, project, saved_paths)?;
-            // Saves only store files, so a directory that is empty once its
-            // unsaved contents are gone is not part of the save. This also
-            // removes directories that were already empty before loading.
             if fs::read_dir(&entry)?.next().is_none() {
                 fs::remove_dir(&entry)?;
             }
             continue;
         }
 
-        let Ok(existing_path) = entry.canonicalize() else {
-            continue;
-        };
-        let existing_path = existing_path.to_string_lossy().to_string();
-        if saved_paths
-            .iter()
-            .any(|saved_path| *saved_path == &existing_path)
-        {
-            continue;
+        let existing_path = entry.canonicalize()?.to_string_lossy().to_string();
+        if !saved_paths.iter().any(|saved| **saved == existing_path) {
+            fs::remove_file(&entry)?;
         }
-
-        fs::remove_file(&entry)?;
     }
 
     Ok(())
