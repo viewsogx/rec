@@ -51,7 +51,7 @@ fn save_files(
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
 
-        if project.ignore.contains(&file_name) {
+        if is_ignored(project, &file_name) {
             continue;
         }
         if path.is_dir() {
@@ -153,7 +153,7 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         saved_paths.push(&file.file_name);
         let file_path = Path::new(&file.file_name);
         let file_name = &file_path.file_name().unwrap().to_string_lossy().to_string();
-        if file_name == "rec.toml" || project.ignore.contains(file_name) {
+        if file_name == "rec.toml" || is_ignored(project, file_name) {
             continue;
         }
 
@@ -179,14 +179,40 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
             .map_err(|e| anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
     }
 
-    for dir in fs::read_dir(".")? {
-        let existing_path = dir?.path().canonicalize()?.to_string_lossy().to_string();
-        for saved_path in &saved_paths {
-            // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
-            println!("e: {existing_path} s: {saved_path}");
+    delete_not_saved(Path::new("."), project, &saved_paths)?;
+    Ok(())
+}
+
+fn delete_not_saved(
+    path: &Path,
+    project: &Project,
+    saved_paths: &Vec<&String>,
+) -> Result<(), Error> {
+    for dir in fs::read_dir(path)? {
+        let entry = dir?.path();
+        let existing_path = entry.canonicalize()?.to_string_lossy().to_string();
+        let file_name = &entry.file_name().unwrap().to_string_lossy().to_string();
+        if is_ignored(project, file_name) {
+            continue;
+        }
+
+        if entry.is_dir() {
+            delete_not_saved(&entry, project, &saved_paths)?;
+        } else {
+            for saved_path in saved_paths {
+                // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
+                println!("e: {existing_path} s: {saved_path}");
+            }
         }
     }
     Ok(())
+}
+
+fn is_ignored(project: &Project, path: &String) -> bool {
+    if project.ignore.contains(path) {
+        return true;
+    }
+    false
 }
 
 pub fn list(db: &Connection, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
