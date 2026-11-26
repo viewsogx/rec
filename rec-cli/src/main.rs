@@ -4,7 +4,7 @@ use colored::Colorize;
 use commands::ALL_COMMANDS;
 use rec_core::models::{Config, Project};
 use rec_core::utils::generate_id;
-use rec_core::{init, load, log, save};
+use rec_core::{init, load, list, save};
 use rusqlite::Connection;
 use std::{env, fs, io, path::Path, process::exit};
 
@@ -213,10 +213,10 @@ fn load_command(args: &[String]) {
     println!("Successfully restored save {}.", save_id.bright_green());
 }
 
-fn log_command(args: &[String]) {
+fn list_command(args: &[String]) {
     if args.len() != 2 {
         eprintln!(
-            "Wrong number of arguments! {} required:\n{} log {}",
+            "Wrong number of arguments! {} required:\n{} list {}",
             "(1)".red(),
             "rec".yellow(),
             "<limit>".cyan()
@@ -237,7 +237,7 @@ fn log_command(args: &[String]) {
         return;
     };
 
-    match log(&db, &project, limit) {
+    match list(&db, &project, limit) {
         Err(err) => {
             eprintln!("{err}")
         }
@@ -289,7 +289,7 @@ fn main() {
         "i" | "init" => init_command(&args),
         "s" | "save" => save_command(&args),
         "ld" | "load" => load_command(&args),
-        "l" | "log" => log_command(&args),
+        "ls" | "list" => list_command(&args),
         _ => print_unknown_command(command),
     }
 }

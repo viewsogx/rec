@@ -21,8 +21,8 @@ pub const ALL_COMMANDS: &[Command] = &[
         description: "Saves the current changes as a new commit",
     },
     Command {
-        name: "log",
-        short: "l",
+        name: "list",
+        short: "ls",
         description: "Displays the commit history of the repository",
     },
     Command {

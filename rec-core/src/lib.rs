@@ -180,7 +180,7 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
     Ok(())
 }
 
-pub fn log(db: &Connection, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
+pub fn list(db: &Connection, project: &Project, limit: u32) -> Result<Vec<Save>, Error> {
     let query = format!(
         r#"SELECT * FROM "saves_{}" ORDER BY timestamp DESC LIMIT {limit};"#,
         project.id.as_ref().unwrap(),
