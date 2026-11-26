@@ -191,7 +191,9 @@ A save performs three steps:
 3. **Insert** one row per file into `hashes_<project-id>` and one row into `saves_<project-id>`.
 
 `rec load` queries every file row for the given save ID, decompresses the stored bytes, and writes
-them back to their recorded paths.
+them back to their recorded paths. It then deletes files and directories that are not part of the
+save, skipping names listed in `ignore`. Empty directories are not stored in saves, so they are
+removed during loading as well.
 
 Because snapshots are stored per project ID, multiple projects can share one local database without
 colliding.
@@ -277,8 +279,9 @@ rec is a working prototype, not a finished version control system. Current limit
 - **Exact-name ignores.** `ignore` does not support glob patterns such as `*.log`.
 - **Overwrite on restore.** `rec load` writes files directly and does not detect conflicting local
   changes.
-- **Additive restore.** Files created after a save are not deleted by `rec load`, and empty
-  directories are not stored. Parent directories must already exist when restoring.
+- **Destructive restore.** `rec load` deletes files and directories that are not part of the save,
+  except names listed in `ignore`. Empty directories are not stored in saves, so they are removed
+  during loading too.
 - **No encryption at rest.** The local SQLite database is protected only by filesystem permissions.
 - **No automated test suite.** Tests and benchmarks are planned.
 

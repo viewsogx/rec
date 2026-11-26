@@ -167,8 +167,6 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         let Ok(data) = fs::read(data_dir) else {
             return Err(anyhow!("No save found for file: {}", file.file_name));
         };
-        // TODO:
-        // DELETE ALL NON SAVED FILES FROM DIR
         let decompressed = decompress(&data, size)?;
         if !fs::exists(&file.file_name)? {
             let parent = file_path.parent().unwrap();
@@ -183,30 +181,44 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
     Ok(())
 }
 
-fn delete_not_saved(
-    path: &Path,
-    project: &Project,
-    saved_paths: &Vec<&String>,
-) -> Result<(), Error> {
-    'dirloop: for dir in fs::read_dir(path)? {
-        let entry = dir?.path();
-        let existing_path = entry.canonicalize()?.to_string_lossy().to_string();
-        let file_name = &entry.file_name().unwrap().to_string_lossy().to_string();
-        if is_ignored(project, file_name) {
+fn delete_not_saved(path: &Path, project: &Project, saved_paths: &[&String]) -> Result<(), Error> {
+    // Collect the entries before deleting any of them. Removing entries while a
+    // directory is still being iterated can cause siblings to be skipped.
+    let entries: Vec<_> = fs::read_dir(path)?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<_, _>>()?;
+
+    for entry in entries {
+        let file_name = entry.file_name().unwrap().to_string_lossy().to_string();
+        if is_ignored(project, &file_name) {
             continue;
         }
+
         if entry.is_dir() {
-            delete_not_saved(&entry, project, &saved_paths)?;
-            let _ = fs::remove_dir(&entry);
-        } else {
-            for &saved_path in saved_paths {
-                if saved_path == &existing_path {
-                    continue 'dirloop;
-                }
+            delete_not_saved(&entry, project, saved_paths)?;
+            // Saves only store files, so a directory that is empty once its
+            // unsaved contents are gone is not part of the save. This also
+            // removes directories that were already empty before loading.
+            if fs::read_dir(&entry)?.next().is_none() {
+                fs::remove_dir(&entry)?;
             }
-            fs::remove_file(&existing_path)?;
+            continue;
         }
+
+        let Ok(existing_path) = entry.canonicalize() else {
+            continue;
+        };
+        let existing_path = existing_path.to_string_lossy().to_string();
+        if saved_paths
+            .iter()
+            .any(|saved_path| *saved_path == &existing_path)
+        {
+            continue;
+        }
+
+        fs::remove_file(&entry)?;
     }
+
     Ok(())
 }
 
@@ -233,4 +245,72 @@ pub fn list(db: &Connection, project: &Project, limit: u32) -> Result<Vec<Save>,
         )));
     };
     Ok(saves)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn test_project(ignore: &[&str]) -> Project {
+        Project {
+            name: "test".into(),
+            branch: "main".into(),
+            ignore: ignore.iter().map(|name| name.to_string()).collect(),
+            remote: String::new(),
+            id: Some("test".into()),
+        }
+    }
+
+    fn test_dir(name: &str) -> PathBuf {
+        let dir = env::temp_dir().join(format!("rec-{name}-{}", generate_id(8)));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn deletes_unsaved_files_and_directories() -> Result<(), Error> {
+        let root = test_dir("delete-unsaved");
+
+        fs::write(root.join("saved.txt"), "saved")?;
+        fs::write(root.join("unsaved.txt"), "unsaved")?;
+
+        fs::create_dir_all(root.join("saved_dir"))?;
+        fs::write(root.join("saved_dir").join("keep.txt"), "keep")?;
+        fs::create_dir_all(root.join("saved_dir").join("empty_subdir"))?;
+
+        fs::create_dir_all(root.join("empty_dir"))?;
+        fs::create_dir_all(root.join("unsaved_dir").join("nested"))?;
+        fs::write(
+            root.join("unsaved_dir").join("nested").join("drop.txt"),
+            "drop",
+        )?;
+
+        fs::create_dir_all(root.join("ignored_dir"))?;
+        fs::write(root.join("ignored_dir").join("keep.txt"), "keep")?;
+
+        let saved_paths: Vec<String> = [
+            root.join("saved.txt"),
+            root.join("saved_dir").join("keep.txt"),
+        ]
+        .iter()
+        .map(|path| path.canonicalize().unwrap().to_string_lossy().to_string())
+        .collect();
+        let saved_path_refs: Vec<&String> = saved_paths.iter().collect();
+
+        let project = test_project(&["ignored_dir"]);
+        delete_not_saved(&root, &project, &saved_path_refs)?;
+
+        assert!(root.join("saved.txt").is_file());
+        assert!(root.join("saved_dir").join("keep.txt").is_file());
+        assert!(root.join("ignored_dir").join("keep.txt").is_file());
+
+        assert!(!root.join("saved_dir").join("empty_subdir").exists());
+        assert!(!root.join("empty_dir").exists());
+        assert!(!root.join("unsaved_dir").exists());
+        assert!(!root.join("unsaved.txt").exists());
+
+        fs::remove_dir_all(&root)?;
+        Ok(())
+    }
 }
