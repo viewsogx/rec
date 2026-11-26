@@ -148,7 +148,9 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         return Err(Error::msg("No matching save found"));
     }
     save(db, &format!("<< Loaded save: {save_id} >>"), project)?;
-    for file in files {
+    let mut saved_paths: Vec<&String> = Vec::new();
+    for file in &files {
+        saved_paths.push(&file.file_name);
         let file_path = Path::new(&file.file_name);
         let file_name = &file_path.file_name().unwrap().to_string_lossy().to_string();
         if file_name == "rec.toml" || project.ignore.contains(file_name) {
@@ -161,11 +163,10 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
             .expect("no data dir")
             .join(".rec")
             .join("data")
-            .join(file.hash);
+            .join(&file.hash);
         let Ok(data) = fs::read(data_dir) else {
             return Err(anyhow!("No save found for file: {}", file.file_name));
         };
-        // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
         // TODO:
         // DELETE ALL NON SAVED FILES FROM DIR
         let decompressed = decompress(&data, size)?;
@@ -176,6 +177,14 @@ pub fn load(db: &Connection, save_id: &String, project: &Project) -> Result<(), 
         }
         fs::write(&file.file_name, decompressed)
             .map_err(|e| anyhow!("Failed to restore '{}': {}", file.file_name, e))?;
+    }
+
+    for dir in fs::read_dir(".")? {
+        let existing_path = dir?.path().canonicalize()?.to_string_lossy().to_string();
+        for saved_path in &saved_paths {
+            // let absolute_path = path.canonicalize()?.to_string_lossy().to_string();
+            println!("e: {existing_path} s: {saved_path}");
+        }
     }
     Ok(())
 }
